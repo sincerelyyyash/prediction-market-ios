@@ -1,25 +1,38 @@
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
+    init() {
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.configureWithOpaqueBackground()
+        tabBarAppearance.backgroundColor = .black
+
+        UITabBar.appearance().standardAppearance = tabBarAppearance
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+        }
+    }
+
     var body: some View {
         TabView {
             HomeView()
                 .tabItem {
                     Label(Constants.homeString, systemImage: Constants.homeIconString)
                 }
-            PlaceholderTab(title: Constants.marketString)
+            MarketView()
                 .tabItem {
                     Label(Constants.marketString, systemImage: Constants.marketIconString)
                 }
-            PlaceholderTab(title: Constants.portfolioString)
+            PortfolioView()
                 .tabItem {
                     Label(Constants.portfolioString, systemImage: Constants.portfolioIconString)
                 }
-            PlaceholderTab(title: Constants.profileString)
+            ProfileView()
                 .tabItem {
                     Label(Constants.profileString, systemImage: Constants.profileIconString)
                 }
         }
+        .tint(.white)
     }
 }
 
