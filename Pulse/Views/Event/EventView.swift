@@ -16,7 +16,7 @@ struct EventView: View {
                             .padding(.horizontal, 16)
                             .padding(.top, 10)
                         EventHeroImageView(
-                            imageName: event.imageName,
+                            imageName: "eventPlaceholder",
                             availableWidth: geo.size.width
                         )
                         .padding(.horizontal, 16)
@@ -45,6 +45,8 @@ struct EventView: View {
                 }
             }
         }
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     private func backgroundGradient(for geo: GeometryProxy) -> some View {

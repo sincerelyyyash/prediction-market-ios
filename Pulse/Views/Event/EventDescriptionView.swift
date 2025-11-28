@@ -14,7 +14,9 @@ struct EventDescriptionView: View {
                     .font(.system(size: 15))
                     .foregroundColor(.white.opacity(0.9))
                     .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
