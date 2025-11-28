@@ -3,28 +3,19 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         TabView {
-            
-            Text(Constants.homeString)
+            HomeView()
                 .tabItem {
                     Label(Constants.homeString, systemImage: Constants.homeIconString)
                 }
-
-            Text(Constants.marketString)
+            PlaceholderTab(title: Constants.marketString)
                 .tabItem {
                     Label(Constants.marketString, systemImage: Constants.marketIconString)
                 }
-
-            Text(Constants.portfolioString)
+            PlaceholderTab(title: Constants.portfolioString)
                 .tabItem {
                     Label(Constants.portfolioString, systemImage: Constants.portfolioIconString)
                 }
-            
-//            Text(Constants.searchString)
-//                .tabItem {
-//                    Label(Constants.searchString, systemImage: Constants.searchIconString)
-//                }
-            
-            Text(Constants.profileString)
+            PlaceholderTab(title: Constants.profileString)
                 .tabItem {
                     Label(Constants.profileString, systemImage: Constants.profileIconString)
                 }
@@ -32,6 +23,21 @@ struct ContentView: View {
     }
 }
 
+private struct PlaceholderTab: View {
+    let title: String
+
+    var body: some View {
+        VStack {
+            Spacer()
+            Text("\(title) coming soon")
+                .foregroundColor(.white.opacity(0.6))
+            Spacer()
+        }
+        .background(Color.black.ignoresSafeArea())
+    }
+}
+
 #Preview {
     ContentView()
+        .preferredColorScheme(.dark)
 }
