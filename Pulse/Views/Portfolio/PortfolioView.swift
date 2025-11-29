@@ -9,159 +9,35 @@ struct PortfolioView: View {
     }
 
     @State private var selectedTab: PortfolioTab = .positions
+    @State private var totalPnLValue: Double = 0
+    @State private var totalPnLPercent: Double = 0
+    @State private var totalBalance: Int64 = 0
+    @State private var positions: [Position] = []
+    @State private var openOrders: [Order] = []
+    @State private var orderHistory: [Order] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
 
-    // Demo PnL values (header)
-    @State private var totalPnLValue: Double = 1234.56
-    @State private var totalPnLPercent: Double = 12.3
-
-    // Demo data based on market-style Yes/No outcomes
-    private var demoPositions: [PortfolioPosition] {
-        guard let event = Constants.placeholderEventDetails.first else { return [] }
-        let outcomes = event.outcomes
-        var items: [PortfolioPosition] = []
-        if let first = outcomes.first {
-            items.append(
-                PortfolioPosition(
-                    eventTitle: event.title,
-                    outcomeName: first.name,
-                    side: .yes,
-                    qty: 120,
-                    avgPrice: 0.52,
-                    markPrice: first.yes.price
-                )
-            )
-        }
-        if outcomes.count > 1 {
-            let second = outcomes[1]
-            items.append(
-                PortfolioPosition(
-                    eventTitle: event.title,
-                    outcomeName: second.name,
-                    side: .no,
-                    qty: 80,
-                    avgPrice: 0.65,
-                    markPrice: second.no.price
-                )
-            )
-        }
-        if outcomes.count > 2 {
-            let third = outcomes[2]
-            items.append(
-                PortfolioPosition(
-                    eventTitle: event.title,
-                    outcomeName: third.name,
-                    side: .yes,
-                    qty: 60,
-                    avgPrice: 0.40,
-                    markPrice: third.yes.price
-                )
-            )
-        }
-        return items
+    private var pendingOrders: [Order] {
+        openOrders.filter { !$0.isFilled }
     }
 
-    private var demoPendingOrders: [PortfolioOrder] {
-        guard let event = Constants.placeholderEventDetails.first else { return [] }
-        let outcomes = event.outcomes
-        var items: [PortfolioOrder] = []
-        if let first = outcomes.first {
-            items.append(
-                PortfolioOrder(
-                    eventTitle: event.title,
-                    outcomeName: first.name,
-                    side: .yes,
-                    qty: 50,
-                    limitPrice: (first.yes.bestBid + first.yes.bestAsk) / 2.0,
-                    status: .pending
-                )
-            )
-        }
-        if outcomes.count > 1 {
-            let second = outcomes[1]
-            items.append(
-                PortfolioOrder(
-                    eventTitle: event.title,
-                    outcomeName: second.name,
-                    side: .no,
-                    qty: 30,
-                    limitPrice: (second.no.bestBid + second.no.bestAsk) / 2.0,
-                    status: .pending
-                )
-            )
-        }
-        return items
-    }
-
-    private var demoClosedOrders: [PortfolioOrder] {
-        guard let event = Constants.placeholderEventDetails.first else { return [] }
-        let outcomes = event.outcomes
-        var items: [PortfolioOrder] = []
-        if outcomes.count > 1 {
-            let second = outcomes[1]
-            items.append(
-                PortfolioOrder(
-                    eventTitle: event.title,
-                    outcomeName: second.name,
-                    side: .yes,
-                    qty: 40,
-                    limitPrice: second.yes.price,
-                    status: .filled
-                )
-            )
-        }
-        if let first = outcomes.first {
-            items.append(
-                PortfolioOrder(
-                    eventTitle: event.title,
-                    outcomeName: first.name,
-                    side: .no,
-                    qty: 100,
-                    limitPrice: first.no.price,
-                    status: .filled
-                )
-            )
-        }
-        return items
+    private var closedOrders: [Order] {
+        orderHistory.filter { $0.isFilled }
     }
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
                 backgroundGradient(for: geo)
-                VStack(spacing: 0) {
-                    Spacer(minLength: 8)
-
-                    header
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 10)
-
-                    // Market-style filter chips
-                    tabFilters
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
-
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            switch selectedTab {
-                            case .positions:
-                                ForEach(demoPositions) { position in
-                                    PositionRow(position: position)
-                                }
-                            case .pending:
-                                ForEach(demoPendingOrders) { order in
-                                    OrderRow(order: order)
-                                }
-                            case .closed:
-                                ForEach(demoClosedOrders) { order in
-                                    OrderRow(order: order)
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                    }
-                }
+                contentBody
             }
+        }
+        .task {
+            await loadPortfolioData()
+        }
+        .refreshable {
+            await loadPortfolioData()
         }
     }
 
@@ -267,60 +143,156 @@ struct PortfolioView: View {
             .allowsHitTesting(false)
         }
     }
-}
 
-// MARK: - Models
+    @ViewBuilder
+    private var contentBody: some View {
+        if isLoading {
+            ProgressView("Loading portfolio...")
+                .progressViewStyle(.circular)
+                .tint(.white)
+        } else if let errorMessage {
+            VStack(spacing: 12) {
+                Text("Unable to load portfolio")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Text(errorMessage)
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                Button("Retry") {
+                    Task { await loadPortfolioData() }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        } else {
+            VStack(spacing: 0) {
+                Spacer(minLength: 8)
 
-private struct PortfolioPosition: Identifiable {
-    let id = UUID()
-    let eventTitle: String
-    let outcomeName: String
-    let side: MarketSideType
-    let qty: Int
-    let avgPrice: Double   // 0...1
-    let markPrice: Double  // 0...1
-}
+                header
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
 
-private enum OrderStatus: String {
-    case pending = "Pending"
-    case filled = "Filled"
-    case cancelled = "Cancelled"
-}
+                tabFilters
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
 
-private struct PortfolioOrder: Identifiable {
-    let id = UUID()
-    let eventTitle: String
-    let outcomeName: String
-    let side: MarketSideType
-    let qty: Int
-    let limitPrice: Double // 0...1
-    let status: OrderStatus
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        switch selectedTab {
+                        case .positions:
+                            if positions.isEmpty {
+                                emptyState(message: "No open positions yet.")
+                            } else {
+                                ForEach(positions) { position in
+                                    PositionRow(position: position)
+                                }
+                            }
+                        case .pending:
+                            if pendingOrders.isEmpty {
+                                emptyState(message: "No pending orders.")
+                            } else {
+                                ForEach(pendingOrders) { order in
+                                    OrderRow(order: order)
+                                }
+                            }
+                        case .closed:
+                            if closedOrders.isEmpty {
+                                emptyState(message: "No closed orders.")
+                            } else {
+                                ForEach(closedOrders) { order in
+                                    OrderRow(order: order)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+            }
+        }
+    }
+
+    private func emptyState(message: String) -> some View {
+        Text(message)
+            .font(.footnote)
+            .foregroundColor(.white.opacity(0.7))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
+    }
+
+    private func loadPortfolioData() async {
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+        }
+
+        do {
+            async let portfolioTask = PositionService.shared.getPortfolio()
+            async let positionsTask = PositionService.shared.getPositions()
+            async let pendingTask = OrderService.shared.getOpenOrders()
+            async let historyTask = OrderService.shared.getOrderHistory()
+            let (portfolio, positions, pending, history) = try await (portfolioTask, positionsTask, pendingTask, historyTask)
+            await MainActor.run {
+                self.positions = positions
+                self.openOrders = pending
+                self.orderHistory = history
+                
+                // Calculate PnL from portfolio data
+                // PnL from API is in the same units as balance
+                // Following the same pattern as ProfileView, balance is used directly
+                if let pnl = portfolio.pnl {
+                    totalPnLValue = Double(pnl)
+                } else {
+                    totalPnLValue = 0
+                }
+                
+                // Calculate PnL percentage based on balance
+                // PnL percentage = (PnL / Balance) * 100
+                if let balance = portfolio.balance, balance != 0 {
+                    let balanceValue = Double(balance)
+                    totalPnLPercent = (totalPnLValue / balanceValue) * 100.0
+                } else if let totalValue = portfolio.totalValue, totalValue != 0 {
+                    // Fallback: calculate percentage based on total value if balance is not available
+                    let totalValueDouble = Double(totalValue)
+                    totalPnLPercent = (totalPnLValue / totalValueDouble) * 100.0
+                } else {
+                    totalPnLPercent = 0
+                }
+                
+                totalBalance = portfolio.balance ?? 0
+                isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                isLoading = false
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
 }
 
 // MARK: - Rows
 
 private struct PositionRow: View {
-    let position: PortfolioPosition
+    let position: Position
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                sideChip(position.side)
-                Text(position.outcomeName)
+                Text("Market \(position.marketId)")
                     .font(.headline.weight(.semibold))
                     .foregroundColor(.white)
                 Spacer()
-                Text(pnlString(pnlValue()))
+                Text("Qty: \(position.quantity)")
                     .font(.headline.weight(.semibold))
-                    .foregroundColor(pnlValue() >= 0 ? .green : .red)
+                    .foregroundColor(.white)
             }
-            Text(position.eventTitle)
+            Text("Updated \(position.updatedAt ?? "--")")
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.65))
             HStack(spacing: 10) {
-                statChip(title: "Qty", value: "\(position.qty)")
-                statChip(title: "Avg", value: formattedProb(position.avgPrice))
-                statChip(title: "Mark", value: formattedProb(position.markPrice))
+                statChip(title: "User", value: "\(position.userId)")
+                statChip(title: "Created", value: position.createdAt ?? "--")
                 Spacer()
             }
         }
@@ -333,29 +305,6 @@ private struct PositionRow: View {
                         .strokeBorder(Color.white.opacity(0.08))
                 )
         )
-    }
-
-    private func pnlValue() -> Double {
-        let diff = position.side == .yes ? (position.markPrice - position.avgPrice) : (position.avgPrice - position.markPrice)
-        return diff * Double(position.qty)
-    }
-    private func pnlString(_ v: Double) -> String {
-        let sign = v >= 0 ? "+" : ""
-        return "\(sign)$\(String(format: "%.2f", abs(v)))"
-    }
-    private func formattedProb(_ p: Double) -> String {
-        String(format: "%.2f", p)
-    }
-    private func sideChip(_ side: MarketSideType) -> some View {
-        Text(side.rawValue.uppercased())
-            .font(.caption.weight(.bold))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(side.color.opacity(0.22))
-            )
-            .foregroundColor(side.color)
     }
     private func statChip(title: String, value: String) -> some View {
         HStack(spacing: 6) {
@@ -376,24 +325,24 @@ private struct PositionRow: View {
 }
 
 private struct OrderRow: View {
-    let order: PortfolioOrder
+    let order: Order
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                sideChip(order.side)
-                Text(order.outcomeName)
+                Text(order.side.rawValue.uppercased())
                     .font(.headline.weight(.semibold))
                     .foregroundColor(.white)
                 Spacer()
                 statusBadge
             }
-            Text(order.eventTitle)
+            Text("Market \(order.marketId)")
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.65))
             HStack(spacing: 10) {
-                statChip(title: "Qty", value: "\(order.qty)")
-                statChip(title: "Limit", value: formattedProb(order.limitPrice))
+                statChip(title: "Qty", value: "\(order.originalQuantity)")
+                statChip(title: "Price", value: "\(order.price)")
+                statChip(title: "Status", value: order.status ?? "--")
                 Spacer()
             }
         }
@@ -409,7 +358,7 @@ private struct OrderRow: View {
     }
 
     private var statusBadge: some View {
-        Text(order.status.rawValue)
+        Text(order.status ?? "Pending")
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -421,26 +370,15 @@ private struct OrderRow: View {
     }
 
     private var badgeColor: Color {
-        switch order.status {
-        case .pending: return .yellow
-        case .filled: return .green
-        case .cancelled: return .red
+        guard let status = order.status?.lowercased() else { return .yellow }
+        switch status {
+        case "filled":
+            return .green
+        case "cancelled":
+            return .red
+        default:
+            return .yellow
         }
-    }
-
-    private func formattedProb(_ p: Double) -> String {
-        String(format: "%.2f", p)
-    }
-    private func sideChip(_ side: MarketSideType) -> some View {
-        Text(side.rawValue.uppercased())
-            .font(.caption.weight(.bold))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(side.color.opacity(0.22))
-            )
-            .foregroundColor(side.color)
     }
     private func statChip(title: String, value: String) -> some View {
         HStack(spacing: 6) {

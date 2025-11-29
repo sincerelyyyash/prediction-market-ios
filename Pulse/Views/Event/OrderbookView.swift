@@ -6,6 +6,13 @@ struct OrderbookView: View {
 
     @State private var selectedSide: MarketSideType = .yes
     @State private var levelCount = 10
+    @State private var orderbook: DemoOrderbook?
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+
+    private var currentMarketId: UInt64? {
+        selectedSide == .yes ? outcome.yes.marketId : outcome.no.marketId
+    }
 
     private var topOfBookBid: Double {
         selectedSide == .yes ? outcome.yes.bestBid : outcome.no.bestBid
@@ -15,13 +22,9 @@ struct OrderbookView: View {
         selectedSide == .yes ? outcome.yes.bestAsk : outcome.no.bestAsk
     }
 
-    private var bookFromConstants: Orderbook? {
-        Constants.placeholderOrderbooks[eventID]?[outcome.id]?[selectedSide]
-    }
-
-    private var book: Orderbook {
-        if let book = bookFromConstants {
-            return expand(book: book, to: levelCount)
+    private var book: DemoOrderbook {
+        if let fetchedBook = orderbook {
+            return expand(book: fetchedBook, to: levelCount)
         }
         return fallbackLadder(steps: levelCount)
     }
@@ -31,8 +34,34 @@ struct OrderbookView: View {
             Color.clear.frame(height: 8)
             header
             levelSelector
-            ladderHeader
-            ladderBody
+            
+            if isLoading {
+                ProgressView("Loading orderbook...")
+                    .progressViewStyle(.circular)
+                    .tint(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+            } else if let errorMessage {
+                VStack(spacing: 8) {
+                    Text("Unable to load orderbook")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.7))
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.5))
+                    Button("Retry") {
+                        Task { await loadOrderbook() }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            } else {
+                ladderHeader
+                ladderBody
+            }
+            
             actionButtons
         }
         .padding(.horizontal)
@@ -40,6 +69,45 @@ struct OrderbookView: View {
         .frame(maxWidth: .infinity, alignment: .top)
         .background(Color.black)
         .ignoresSafeArea()
+        .task {
+            await loadOrderbook()
+        }
+        .onChange(of: selectedSide) { _ in
+            Task {
+                await loadOrderbook()
+            }
+        }
+    }
+    
+    private func loadOrderbook() async {
+        guard let marketId = currentMarketId else {
+            await MainActor.run {
+                orderbook = nil
+                isLoading = false
+                errorMessage = "Market ID not available"
+            }
+            return
+        }
+        
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+        }
+        
+        do {
+            let snapshot = try await OrderbookService.shared.getOrderbook(for: marketId)
+            let mappedBook = mapOrderbookSnapshotToDemoOrderbook(snapshot)
+            await MainActor.run {
+                orderbook = mappedBook
+                isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                isLoading = false
+                errorMessage = error.localizedDescription
+                orderbook = nil
+            }
+        }
     }
 
     private var header: some View {
@@ -129,7 +197,7 @@ struct OrderbookView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    private func bidView(_ bid: OrderbookLevel?, maxQty: Double) -> some View {
+    private func bidView(_ bid: DemoOrderbookLevel?, maxQty: Double) -> some View {
         ZStack(alignment: .leading) {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(Color.green.opacity(0.10))
@@ -148,7 +216,7 @@ struct OrderbookView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func askView(_ ask: OrderbookLevel?, maxQty: Double) -> some View {
+    private func askView(_ ask: DemoOrderbookLevel?, maxQty: Double) -> some View {
         ZStack(alignment: .trailing) {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(Color.red.opacity(0.10))
@@ -230,23 +298,23 @@ struct OrderbookView: View {
         .buttonStyle(.plain)
     }
 
-    private func fallbackLadder(steps: Int) -> Orderbook {
+    private func fallbackLadder(steps: Int) -> DemoOrderbook {
         let tick = 0.01
         let baseSize: Double = 1_000
-        let bids: [OrderbookLevel] = (0..<steps).map { index in
+        let bids: [DemoOrderbookLevel] = (0..<steps).map { index in
             let price = max(0.0, topOfBookBid - Double(index) * tick)
             let size = baseSize * (1.0 + Double(index) * 0.25)
-            return OrderbookLevel(price: price, size: size)
+            return DemoOrderbookLevel(price: price, size: size)
         }
-        let asks: [OrderbookLevel] = (0..<steps).map { index in
+        let asks: [DemoOrderbookLevel] = (0..<steps).map { index in
             let price = min(1.0, topOfBookAsk + Double(index) * tick)
             let size = baseSize * (1.0 + Double(index) * 0.25)
-            return OrderbookLevel(price: price, size: size)
+            return DemoOrderbookLevel(price: price, size: size)
         }
-        return Orderbook(bids: bids, asks: asks)
+        return DemoOrderbook(bids: bids, asks: asks)
     }
 
-    private func expand(book: Orderbook, to levels: Int) -> Orderbook {
+    private func expand(book: DemoOrderbook, to levels: Int) -> DemoOrderbook {
         if book.bids.count >= levels && book.asks.count >= levels {
             return book
         }
@@ -256,7 +324,7 @@ struct OrderbookView: View {
 
         if let lastBid = bids.last {
             while bids.count < levels {
-                let next = OrderbookLevel(
+                let next = DemoOrderbookLevel(
                     price: max(0.0, lastBid.price - tick * Double(bids.count - book.bids.count + 1)),
                     size: lastBid.size * (1.0 + 0.2 * Double(bids.count - book.bids.count + 1))
                 )
@@ -266,14 +334,14 @@ struct OrderbookView: View {
 
         if let lastAsk = asks.last {
             while asks.count < levels {
-                let next = OrderbookLevel(
+                let next = DemoOrderbookLevel(
                     price: min(1.0, lastAsk.price + tick * Double(asks.count - book.asks.count + 1)),
                     size: lastAsk.size * (1.0 + 0.2 * Double(asks.count - book.asks.count + 1))
                 )
                 asks.append(next)
             }
         }
-        return Orderbook(
+        return DemoOrderbook(
             bids: Array(bids.prefix(levels)),
             asks: Array(asks.prefix(levels))
         )

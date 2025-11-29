@@ -4,6 +4,12 @@ struct MarketView: View {
     @State private var searchText = ""
     @State private var selectedCategory: EventCategory?
     @State private var path: [UUID] = []
+    @State private var events: [EventDetail] = []
+    @State private var eventIdMap: [UInt64: UUID] = [:]
+    @State private var uuidToEventIdMap: [UUID: UInt64] = [:]
+    @State private var eventDetailsCache: [UUID: EventDetail] = [:]
+    @State private var isLoading = false
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -15,39 +21,21 @@ struct MarketView: View {
                         header
                             .padding(.horizontal, 16)
                             .padding(.bottom, 6)
-                        ScrollView {
-                            LazyVStack(spacing: 14) {
-                                ForEach(filteredMarkets) { detail in
-                                    MarketCardView(
-                                        content: MarketCardContent(detail: detail),
-                                        handleOpen: {
-                                            path.append(detail.id)
-                                        }
-                                    )
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                        }
+                        contentBody
                     }
                 }
             }
             .navigationDestination(for: UUID.self) { id in
-                // Try to find in derived list first
-                if let detail = filteredMarkets.first(where: { $0.id == id }) {
-                    EventView(event: detail)
-                        .preferredColorScheme(.dark)
-                }
-                // Fallback to original placeholderEventDetails (demo)
-                else if let detail = Constants.placeholderEventDetails.first(where: { $0.id == id }) {
-                    EventView(event: detail)
-                        .preferredColorScheme(.dark)
-                } else {
-                    Text("Market not found")
-                        .foregroundColor(.white.opacity(0.8))
-                        .background(Color.black.ignoresSafeArea())
-                }
+                MarketEventDetailView(
+                    eventId: id,
+                    cachedDetail: eventDetailsCache[id] ?? filteredMarkets.first(where: { $0.id == id }),
+                    uuidToEventIdMap: uuidToEventIdMap,
+                    eventDetailsCache: $eventDetailsCache
+                )
             }
+        }
+        .task {
+            await loadEvents()
         }
     }
 
@@ -63,50 +51,82 @@ struct MarketView: View {
             )
         }
     }
-
-    // Build multiple EventDetail-like items from the many placeholder Events
-    private var derivedEventDetails: [EventDetail] {
-        Constants.placeholderEvents.map { event in
-            // Create 2-3 mock outcomes per event to fit the multi-outcome UI
-            let outcomes: [OutcomeMarket] = [
-                OutcomeMarket(
-                    name: "Outcome A",
-                    yes: OutcomeMarketSide(side: .yes, price: max(0.05, min(0.95, event.yesProbability)), volume: 50_000, bestBid: max(0.0, event.yesProbability - 0.02), bestAsk: min(1.0, event.yesProbability + 0.02)),
-                    no:  OutcomeMarketSide(side: .no,  price: max(0.05, min(0.95, event.noProbability)),  volume: 50_000, bestBid: max(0.0, event.noProbability - 0.02), bestAsk: min(1.0, event.noProbability + 0.02))
-                ),
-                OutcomeMarket(
-                    name: "Outcome B",
-                    yes: OutcomeMarketSide(side: .yes, price: max(0.05, min(0.95, 1 - event.yesProbability * 0.7)), volume: 40_000, bestBid: 0.3, bestAsk: 0.32),
-                    no:  OutcomeMarketSide(side: .no,  price: max(0.05, min(0.95, 1 - event.noProbability * 0.7)),  volume: 40_000, bestBid: 0.68, bestAsk: 0.70)
-                ),
-                OutcomeMarket(
-                    name: "Outcome C",
-                    yes: OutcomeMarketSide(side: .yes, price: 0.12, volume: 24_000, bestBid: 0.11, bestAsk: 0.13),
-                    no:  OutcomeMarketSide(side: .no,  price: 0.88, volume: 24_000, bestBid: 0.87, bestAsk: 0.89)
-                )
-            ]
-
-            return EventDetail(
-                title: event.title,
-                subtitle: event.description,
-                category: event.category,
-                timeRemainingText: event.timeRemainingText,
-                description: event.description,
-                imageName: "eventPlaceholder",
-                outcomes: outcomes
-            )
+    
+    @ViewBuilder
+    private var contentBody: some View {
+        if isLoading {
+            ProgressView("Loading markets...")
+                .progressViewStyle(.circular)
+                .tint(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let errorMessage {
+            VStack(spacing: 12) {
+                Text("Unable to load markets")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Text(errorMessage)
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                Button("Try Again", action: { Task { await loadEvents() } })
+                    .buttonStyle(.borderedProminent)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 14) {
+                    ForEach(filteredMarkets) { detail in
+                        MarketCardView(
+                            content: MarketCardContent(detail: detail),
+                            handleOpen: {
+                                path.append(detail.id)
+                            }
+                        )
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
         }
     }
 
-    // Filters now operate on the derived multi-outcome details
+    // Filters now operate on the fetched events
     private var filteredMarkets: [EventDetail] {
-        derivedEventDetails.filter { detail in
+        events.filter { detail in
             let matchesCategory = selectedCategory == nil || detail.category == selectedCategory
             let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
             let matchesSearch = trimmed.isEmpty ||
                 detail.title.localizedCaseInsensitiveContains(trimmed) ||
                 (detail.subtitle?.localizedCaseInsensitiveContains(trimmed) ?? false)
             return matchesCategory && matchesSearch
+        }
+    }
+    
+    private func loadEvents() async {
+        guard !isLoading else { return }
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+        }
+        do {
+            let remoteEvents = try await EventService.shared.getEvents()
+            var mappedEvents: [EventDetail] = []
+            for dto in remoteEvents {
+                if let detail = mapEventDTOToEventDetail(dto, eventIdMap: &eventIdMap) {
+                    mappedEvents.append(detail)
+                    uuidToEventIdMap[detail.id] = dto.id
+                    eventDetailsCache[detail.id] = detail
+                }
+            }
+            await MainActor.run {
+                events = mappedEvents
+                isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                isLoading = false
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -147,6 +167,106 @@ private extension MarketCardContent {
             leadingYesProbability: yesProbability,
             leadingNoProbability: noProbability
         )
+    }
+}
+
+// MARK: - MarketEventDetailView Helper
+
+private struct MarketEventDetailView: View {
+    let eventId: UUID
+    let cachedDetail: EventDetail?
+    let uuidToEventIdMap: [UUID: UInt64]
+    @Binding var eventDetailsCache: [UUID: EventDetail]
+    
+    @State private var eventDetail: EventDetail?
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView("Loading event details...")
+                    .progressViewStyle(.circular)
+                    .tint(.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black.ignoresSafeArea())
+            } else if let errorMessage {
+                VStack(spacing: 12) {
+                    Text("Unable to load event")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                    Button("Retry") {
+                        Task { await loadEventDetail() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.ignoresSafeArea())
+            } else if let detail = eventDetail ?? cachedDetail {
+                EventView(event: detail)
+                    .preferredColorScheme(.dark)
+            } else {
+                Text("Market not found")
+                    .foregroundColor(.white.opacity(0.8))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black.ignoresSafeArea())
+            }
+        }
+        .task {
+            if eventDetail == nil && cachedDetail == nil {
+                await loadEventDetail()
+            }
+        }
+    }
+    
+    private func loadEventDetail() async {
+        guard let eventIdUInt64 = uuidToEventIdMap[eventId] else {
+            await MainActor.run {
+                errorMessage = "Event ID not found"
+            }
+            return
+        }
+        
+        // Check cache first
+        if let cached = eventDetailsCache[eventId] {
+            await MainActor.run {
+                eventDetail = cached
+            }
+            return
+        }
+        
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+        }
+        
+        do {
+            let dto = try await EventService.shared.getEvent(by: eventIdUInt64)
+            var eventIdMap: [UInt64: UUID] = [:]
+            eventIdMap[eventIdUInt64] = eventId
+            
+            if let detail = mapEventDTOToEventDetail(dto, eventIdMap: &eventIdMap) {
+                await MainActor.run {
+                    eventDetail = detail
+                    eventDetailsCache[eventId] = detail
+                    isLoading = false
+                }
+            } else {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = "Failed to map event data"
+                }
+            }
+        } catch {
+            await MainActor.run {
+                isLoading = false
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 }
 

@@ -5,45 +5,34 @@ struct ProfileView: View {
         case addFunds
         case withdraw
     }
-    @State private var userName: String = "Yash Thakur"
-    @State private var userEmail: String = "yash@example.com"
-    @State private var memberSince: String = "Member since 2024"
-    @State private var balance: Double = 2050.35
+
+    @StateObject private var authService = AuthService.shared
+    @State private var userProfile: UserProfile?
+    @State private var memberSince: String = "Pulse trader"
+    @State private var balance: Double = 0
     @State private var path: [ProfileRoute] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack(path: $path) {
             GeometryReader { geo in
                 ZStack {
                     backgroundGradient(for: geo)
-                    ScrollView {
-                        VStack(spacing: 14) {
-                            Spacer(minLength: 8)
-                            header
-                                .padding(.horizontal, 16)
-                                .padding(.bottom, 2)
-
-                            balanceCard
-                                .padding(.horizontal, 16)
-
-                            userCard
-                                .padding(.horizontal, 16)
-
-                            actionSection
-                                .padding(.horizontal, 16)
-                                .padding(.bottom, 16)
-                        }
-                    }
+                    content
                 }
             }
             .navigationDestination(for: ProfileRoute.self) { route in
                 switch route {
                 case .addFunds:
-                    AddFundsScreen(balance: $balance)
+                    AddFundsScreen(balance: $balance, handleSubmit: handleOnramp)
                 case .withdraw:
                     WithdrawFundsScreen(balance: $balance)
                 }
             }
+        }
+        .task {
+            await refreshProfile()
         }
     }
 
@@ -101,12 +90,11 @@ struct ProfileView: View {
                     .foregroundColor(.white.opacity(0.9))
             }
             .accessibilityHidden(true)
-
             VStack(alignment: .leading, spacing: 4) {
-                Text(userName)
+                Text(userProfile?.name ?? "Trader")
                     .font(.headline.weight(.semibold))
                     .foregroundColor(.white)
-                Text(userEmail)
+                Text(userProfile?.email ?? "--")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.7))
                 Text(memberSince)
@@ -126,7 +114,7 @@ struct ProfileView: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("User Info")
-        .accessibilityValue("\(userName), \(userEmail)")
+        .accessibilityValue("\(userProfile?.name ?? "Trader"), \(userProfile?.email ?? "--")")
     }
 
     private var actionSection: some View {
@@ -167,8 +155,7 @@ struct ProfileView: View {
             ) {}
 
             Button {
-                // Placeholder logout action
-                print("Logout tapped")
+                handleLogout()
             } label: {
                 HStack(spacing: 12) {
                     ZStack {
@@ -267,6 +254,99 @@ struct ProfileView: View {
             .allowsHitTesting(false)
         }
     }
+
+    @ViewBuilder
+    private var content: some View {
+        if isLoading {
+            ProgressView("Loading profile...")
+                .progressViewStyle(.circular)
+                .tint(.white)
+        } else if let errorMessage {
+            VStack(spacing: 12) {
+                Text("Unable to load profile")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Text(errorMessage)
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                Button("Retry") {
+                    Task { await refreshProfile() }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        } else {
+            ScrollView {
+                VStack(spacing: 14) {
+                    Spacer(minLength: 8)
+                    header
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 2)
+
+                    balanceCard
+                        .padding(.horizontal, 16)
+
+                    userCard
+                        .padding(.horizontal, 16)
+
+                    actionSection
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                }
+            }
+        }
+    }
+
+    private func refreshProfile() async {
+        guard let userId = authService.session?.user.id else {
+            await MainActor.run {
+                errorMessage = "Please sign in to view your profile."
+            }
+            return
+        }
+
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+        }
+
+        do {
+            async let profileTask = UserService.shared.getUser(by: userId)
+            async let balanceTask = UserService.shared.getBalance()
+            let (profile, balanceResponse) = try await (profileTask, balanceTask)
+            await MainActor.run {
+                userProfile = profile
+                memberSince = "Member since \(Calendar.current.component(.year, from: Date()))"
+                balance = Double(balanceResponse.balance ?? 0)
+                isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                isLoading = false
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func handleOnramp(amount: Int64) async throws {
+        let response = try await UserService.shared.onramp(amount: amount)
+        if let updatedBalance = response.data?.balance {
+            await MainActor.run {
+                balance = Double(updatedBalance)
+            }
+        } else {
+            let balanceResponse = try await UserService.shared.getBalance()
+            await MainActor.run {
+                balance = Double(balanceResponse.balance ?? 0)
+            }
+        }
+    }
+
+    private func handleLogout() {
+        AuthService.shared.signOut()
+        userProfile = nil
+        balance = 0
+    }
 }
 
 #Preview {
@@ -279,6 +359,9 @@ struct ProfileView: View {
 private struct AddFundsScreen: View {
     @Binding var balance: Double
     @State private var amountText: String = ""
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
+    let handleSubmit: (Int64) async throws -> Void
 
     var body: some View {
         GeometryReader { geo in
@@ -297,16 +380,27 @@ private struct AddFundsScreen: View {
                         amountCard
                             .padding(.horizontal, 16)
 
-                        primaryButton(title: "Add Funds", action: handleAdd)
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .font(.footnote)
+                                .foregroundColor(.red)
+                                .padding(.horizontal, 16)
+                        }
+
+                        primaryButton(title: isSubmitting ? "Processing..." : "Add Funds", action: handleAdd)
                             .padding(.horizontal, 16)
                             .padding(.top, 4)
                     }
                     .padding(.bottom, 16)
                 }
+                if isSubmitting {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.white)
+                }
             }
         }
         .navigationTitle("Add Funds")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var amountCard: some View {
@@ -352,10 +446,26 @@ private struct AddFundsScreen: View {
 
     private func handleAdd() {
         let cleaned = amountText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let amount = Double(cleaned), amount > 0 else { return }
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-            balance += amount
-            amountText = ""
+        guard let amount = Double(cleaned), amount > 0 else {
+            errorMessage = "Enter a valid amount."
+            return
+        }
+
+        errorMessage = nil
+        isSubmitting = true
+
+        Task {
+            do {
+                try await handleSubmit(Int64(amount))
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                    balance += amount
+                    amountText = ""
+                }
+                isSubmitting = false
+            } catch {
+                isSubmitting = false
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -408,7 +518,6 @@ private struct WithdrawFundsScreen: View {
             }
         }
         .navigationTitle("Withdraw")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var amountCard: some View {
