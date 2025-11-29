@@ -152,6 +152,7 @@ struct OutcomeMarketSide: Identifiable, Equatable {
     let volume: Double  // notional volume
     let bestBid: Double
     let bestAsk: Double
+    let marketId: UInt64? // Market ID for fetching orderbook
 }
 
 struct OutcomeMarket: Identifiable, Equatable {
@@ -174,50 +175,50 @@ struct EventDetail: Identifiable, Equatable {
 
 // MARK: - Orderbook placeholder models
 
-struct OrderbookLevel: Identifiable, Equatable {
+struct DemoOrderbookLevel: Identifiable, Equatable {
     let id = UUID()
     let price: Double   // 0...1
     let size: Double    // quantity or notional
 }
 
-struct Orderbook: Equatable {
-    var bids: [OrderbookLevel] // sorted desc by price
-    var asks: [OrderbookLevel] // sorted asc by price
+struct DemoOrderbook: Equatable {
+    var bids: [DemoOrderbookLevel] // sorted desc by price
+    var asks: [DemoOrderbookLevel] // sorted asc by price
 }
 
 extension Constants {
     // Helper to generate a small ladder around best bid/ask
-    private static func ladder(bestBid: Double, bestAsk: Double, steps: Int = 5, tick: Double = 0.01, baseSize: Double = 1_000) -> Orderbook {
-        let bids: [OrderbookLevel] = (0..<steps).map { i in
+    private static func ladder(bestBid: Double, bestAsk: Double, steps: Int = 5, tick: Double = 0.01, baseSize: Double = 1_000) -> DemoOrderbook {
+        let bids: [DemoOrderbookLevel] = (0..<steps).map { i in
             let p = max(0.0, bestBid - Double(i) * tick)
             let s = baseSize * (1.0 + Double(i) * 0.2)
-            return OrderbookLevel(price: p, size: s)
+            return DemoOrderbookLevel(price: p, size: s)
         }
-        let asks: [OrderbookLevel] = (0..<steps).map { i in
+        let asks: [DemoOrderbookLevel] = (0..<steps).map { i in
             let p = min(1.0, bestAsk + Double(i) * tick)
             let s = baseSize * (1.0 + Double(i) * 0.2)
-            return OrderbookLevel(price: p, size: s)
+            return DemoOrderbookLevel(price: p, size: s)
         }
-        return Orderbook(bids: bids, asks: asks)
+        return DemoOrderbook(bids: bids, asks: asks)
     }
 
     // Builder returns both the EventDetail array and the orderbooks map
-    private static func buildEventDetailsAndOrderbooks() -> ([EventDetail], [UUID: [UUID: [MarketSideType: Orderbook]]]) {
+    private static func buildEventDetailsAndOrderbooks() -> ([EventDetail], [UUID: [UUID: [MarketSideType: DemoOrderbook]]]) {
         let outcomes: [OutcomeMarket] = [
             OutcomeMarket(
                 name: "Trump",
-                yes: OutcomeMarketSide(side: .yes, price: 0.61, volume: 125_400, bestBid: 0.60, bestAsk: 0.62),
-                no:  OutcomeMarketSide(side: .no,  price: 0.39, volume: 98_200,  bestBid: 0.38, bestAsk: 0.40)
+                yes: OutcomeMarketSide(side: .yes, price: 0.61, volume: 125_400, bestBid: 0.60, bestAsk: 0.62, marketId: nil),
+                no:  OutcomeMarketSide(side: .no,  price: 0.39, volume: 98_200,  bestBid: 0.38, bestAsk: 0.40, marketId: nil)
             ),
             OutcomeMarket(
                 name: "Biden",
-                yes: OutcomeMarketSide(side: .yes, price: 0.28, volume: 89_500, bestBid: 0.27, bestAsk: 0.29),
-                no:  OutcomeMarketSide(side: .no,  price: 0.72, volume: 143_200, bestBid: 0.71, bestAsk: 0.73)
+                yes: OutcomeMarketSide(side: .yes, price: 0.28, volume: 89_500, bestBid: 0.27, bestAsk: 0.29, marketId: nil),
+                no:  OutcomeMarketSide(side: .no,  price: 0.72, volume: 143_200, bestBid: 0.71, bestAsk: 0.73, marketId: nil)
             ),
             OutcomeMarket(
                 name: "Obama",
-                yes: OutcomeMarketSide(side: .yes, price: 0.08, volume: 22_100, bestBid: 0.07, bestAsk: 0.09),
-                no:  OutcomeMarketSide(side: .no,  price: 0.92, volume: 64_300, bestBid: 0.91, bestAsk: 0.93)
+                yes: OutcomeMarketSide(side: .yes, price: 0.08, volume: 22_100, bestBid: 0.07, bestAsk: 0.09, marketId: nil),
+                no:  OutcomeMarketSide(side: .no,  price: 0.92, volume: 64_300, bestBid: 0.91, bestAsk: 0.93, marketId: nil)
             )
         ]
 
@@ -231,7 +232,7 @@ extension Constants {
             outcomes: outcomes
         )
 
-        var orderbooksForEvent: [UUID: [MarketSideType: Orderbook]] = [:]
+        var orderbooksForEvent: [UUID: [MarketSideType: DemoOrderbook]] = [:]
         for outcome in outcomes {
             orderbooksForEvent[outcome.id] = [
                 .yes: ladder(bestBid: outcome.yes.bestBid, bestAsk: outcome.yes.bestAsk),
@@ -240,7 +241,7 @@ extension Constants {
         }
 
         let eventsArray = [event]
-        let orderbooksMap: [UUID: [UUID: [MarketSideType: Orderbook]]] = [
+        let orderbooksMap: [UUID: [UUID: [MarketSideType: DemoOrderbook]]] = [
             event.id: orderbooksForEvent
         ]
         return (eventsArray, orderbooksMap)
@@ -253,7 +254,7 @@ extension Constants {
     }()
 
     // Orderbooks: EventDetail.id -> OutcomeMarket.id -> side -> Orderbook
-    static let placeholderOrderbooks: [UUID: [UUID: [MarketSideType: Orderbook]]] = {
+    static let placeholderOrderbooks: [UUID: [UUID: [MarketSideType: DemoOrderbook]]] = {
         let (_, books) = buildEventDetailsAndOrderbooks()
         return books
     }()
