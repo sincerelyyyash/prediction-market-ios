@@ -9,7 +9,7 @@ struct EventTopBarView: View {
                 handleDismiss()
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.dmMonoMedium(size: 17))
                     .foregroundColor(.white)
                     .padding(10)
                     .background(Color.white.opacity(0.08))

@@ -7,9 +7,9 @@ struct EventPillView: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.dmMonoMedium(size: 12))
             Text(text)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.dmMonoMedium(size: 12))
         }
         .foregroundColor(.white)
         .padding(.vertical, 6)

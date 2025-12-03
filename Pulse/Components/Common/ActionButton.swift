@@ -34,7 +34,7 @@ struct ActionButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.dmMonoMedium(size: 15))
                 .foregroundColor(style.text)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)

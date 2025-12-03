@@ -4,18 +4,28 @@ struct HomeView: View {
 
     @State private var path: [UUID] = []
     @State private var events: [Event] = []
+    @State private var bookmarkedEvents: [Event] = []
+    @State private var forYouEvents: [Event] = []
     @State private var eventIdMap: [UInt64: UUID] = [:]
     @State private var uuidToEventIdMap: [UUID: UInt64] = [:]
     @State private var eventDetailsCache: [UUID: EventDetail] = [:]
     @State private var isLoading = false
     @State private var errorMessage: String?
 
-    private var trendingEvents: [Event] {
-        events.filter { !$0.isResolved }.prefix(10).map { $0 }
+    /// Bookmarks section: show bookmarked events, fallback to first 10 general events if empty
+    private var bookmarksToShow: [Event] {
+        guard bookmarkedEvents.isEmpty else {
+            return bookmarkedEvents
+        }
+        return events.filter { !$0.isResolved }.prefix(10).map { $0 }
     }
 
-    private var yourMarkets: [Event] {
-        events.filter { !$0.isResolved }.prefix(5).map { $0 }
+    /// For You section: show for-you events, fallback to first 5 general events if empty
+    private var forYouToShow: [Event] {
+        guard forYouEvents.isEmpty else {
+            return forYouEvents
+        }
+        return events.filter { !$0.isResolved }.prefix(5).map { $0 }
     }
 
     var body: some View {
@@ -50,10 +60,10 @@ struct HomeView: View {
         } else if let errorMessage {
             VStack(spacing: 12) {
                 Text("Unable to load events")
-                    .font(.headline)
+                    .font(.dmMonoMedium(size: 17))
                     .foregroundColor(.white)
                 Text(errorMessage)
-                    .font(.subheadline)
+                    .font(.dmMonoRegular(size: 15))
                     .foregroundColor(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                 Button("Try Again", action: { Task { await loadEvents() } })
@@ -73,48 +83,64 @@ struct HomeView: View {
 
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Bookmarks")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.dmMonoMedium(size: 20))
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
 
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(trendingEvents) { event in
-                                    EventCardView(
-                                        event: event,
-                                        yesAction: {},
-                                        noAction: {}
-                                    )
-                                    .frame(width: max(260, geo.size.width * 0.72))
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        path.append(event.id)
+                        if bookmarksToShow.isEmpty {
+                            Text("No bookmarks yet")
+                                .font(.dmMonoRegular(size: 14))
+                                .foregroundColor(.white.opacity(0.6))
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                        } else {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(bookmarksToShow) { event in
+                                        EventCardView(
+                                            event: event,
+                                            yesAction: {},
+                                            noAction: {}
+                                        )
+                                        .frame(width: max(260, geo.size.width * 0.72))
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            path.append(event.id)
+                                        }
                                     }
                                 }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 4)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 4)
                         }
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
                         Text("For You")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.dmMonoMedium(size: 20))
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
 
-                        LazyVStack(spacing: 14) {
-                            ForEach(yourMarkets) { event in
-                                MarketCardView(
-                                    content: MarketCardContent(event: event),
-                                    handleOpen: {
-                                        path.append(event.id)
-                                    }
-                                )
+                        if forYouToShow.isEmpty {
+                            Text("No recommendations yet")
+                                .font(.dmMonoRegular(size: 14))
+                                .foregroundColor(.white.opacity(0.6))
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                        } else {
+                            LazyVStack(spacing: 14) {
+                                ForEach(forYouToShow) { event in
+                                    MarketCardView(
+                                        content: MarketCardContent(event: event),
+                                        handleOpen: {
+                                            path.append(event.id)
+                                        }
+                                    )
+                                }
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 12)
                     }
                 }
             }
@@ -128,9 +154,16 @@ struct HomeView: View {
             errorMessage = nil
         }
         do {
-            let remoteEvents = try await EventService.shared.getEvents()
+            // Load all three feeds concurrently
+            async let generalEventsTask = EventService.shared.getEvents()
+            async let bookmarksTask = loadBookmarksOrEmpty()
+            async let forYouTask = loadForYouOrEmpty()
+
+            let (remoteEvents, bookmarks, forYou) = try await (generalEventsTask, bookmarksTask, forYouTask)
             await MainActor.run {
                 events = remoteEvents.compactMap { map(dto: $0) }
+                bookmarkedEvents = bookmarks.compactMap { map(dto: $0) }
+                forYouEvents = forYou.compactMap { map(dto: $0) }
                 isLoading = false
             }
         } catch {
@@ -138,6 +171,24 @@ struct HomeView: View {
                 isLoading = false
                 errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    /// Load bookmarks, returning empty array on failure (non-blocking)
+    private func loadBookmarksOrEmpty() async -> [EventDTO] {
+        do {
+            return try await EventService.shared.getBookmarkedEvents()
+        } catch {
+            return []
+        }
+    }
+
+    /// Load for-you events, returning empty array on failure (non-blocking)
+    private func loadForYouOrEmpty() async -> [EventDTO] {
+        do {
+            return try await EventService.shared.getForYouEvents()
+        } catch {
+            return []
         }
     }
 
@@ -160,7 +211,8 @@ struct HomeView: View {
             yesProbability: yesProbability,
             noProbability: noProbability,
             timeRemainingText: dto.status.capitalized,
-            description: dto.description
+            description: dto.description,
+            imgUrl: dto.imgUrl
         )
     }
 
@@ -238,10 +290,10 @@ private struct EventDetailView: View {
             } else if let errorMessage {
                 VStack(spacing: 12) {
                     Text("Unable to load event")
-                        .font(.headline)
+                        .font(.dmMonoMedium(size: 17))
                         .foregroundColor(.white)
                     Text(errorMessage)
-                        .font(.subheadline)
+                        .font(.dmMonoRegular(size: 15))
                         .foregroundColor(.white.opacity(0.7))
                         .multilineTextAlignment(.center)
                     Button("Retry") {

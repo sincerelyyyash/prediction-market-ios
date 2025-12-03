@@ -14,6 +14,7 @@ struct HomeSearchField: View {
             .textInputAutocapitalization(.none)
             .autocorrectionDisabled()
             .foregroundColor(.white)
+            .font(.dmMonoRegular(size: 15))
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 12)

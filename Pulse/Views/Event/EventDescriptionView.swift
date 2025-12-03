@@ -8,10 +8,10 @@ struct EventDescriptionView: View {
         if let descriptionText, !descriptionText.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Overview")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.dmMonoRegular(size: 14))
                     .foregroundColor(.white.opacity(0.85))
                 Text(descriptionText)
-                    .font(.system(size: 15))
+                    .font(.dmMonoRegular(size: 15))
                     .foregroundColor(.white.opacity(0.9))
                     .fixedSize(horizontal: false, vertical: true)
                     .multilineTextAlignment(.leading)

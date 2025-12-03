@@ -58,6 +58,7 @@ struct Event: Identifiable, Equatable {
     var noProbability: Double  // 0.0 ... 1.0
     var timeRemainingText: String
     var description: String?
+    var imgUrl: String?
 }
 
 extension Constants {
@@ -71,7 +72,8 @@ extension Constants {
             yesProbability: 0.58,
             noProbability: 0.42,
             timeRemainingText: "3d 4h left",
-            description: "Weekly close relative to last Friday."
+            description: "Weekly close relative to last Friday.",
+            imgUrl: nil
         ),
         Event(
             id: UUID(),
@@ -82,7 +84,8 @@ extension Constants {
             yesProbability: 0.36,
             noProbability: 0.64,
             timeRemainingText: "15d left",
-            description: "Season outcome market."
+            description: "Season outcome market.",
+            imgUrl: nil
         ),
         Event(
             id: UUID(),
@@ -93,7 +96,8 @@ extension Constants {
             yesProbability: 0.72,
             noProbability: 0.28,
             timeRemainingText: "120d left",
-            description: "Major product announcement."
+            description: "Major product announcement.",
+            imgUrl: nil
         ),
         Event(
             id: UUID(),
@@ -104,7 +108,8 @@ extension Constants {
             yesProbability: 0.22,
             noProbability: 0.78,
             timeRemainingText: "70d left",
-            description: "Award season market."
+            description: "Award season market.",
+            imgUrl: nil
         ),
         Event(
             id: UUID(),
@@ -115,7 +120,8 @@ extension Constants {
             yesProbability: 0.41,
             noProbability: 0.59,
             timeRemainingText: "200d left",
-            description: "Political developments."
+            description: "Political developments.",
+            imgUrl: nil
         ),
         Event(
             id: UUID(),
@@ -126,7 +132,8 @@ extension Constants {
             yesProbability: 0.18,
             noProbability: 0.82,
             timeRemainingText: "25d left",
-            description: "Astronomy discovery cadence."
+            description: "Astronomy discovery cadence.",
+            imgUrl: nil
         )
     ]
 }
@@ -160,16 +167,18 @@ struct OutcomeMarket: Identifiable, Equatable {
     let name: String // e.g., "Trump"
     let yes: OutcomeMarketSide
     let no: OutcomeMarketSide
+    let imgUrl: String?
 }
 
 struct EventDetail: Identifiable, Equatable {
-    let id = UUID()
+    let id: UUID
     let title: String
     let subtitle: String?
     let category: EventCategory
     let timeRemainingText: String
     let description: String?
     let imageName: String
+    let imgUrl: String?
     let outcomes: [OutcomeMarket]
 }
 
@@ -208,27 +217,32 @@ extension Constants {
             OutcomeMarket(
                 name: "Trump",
                 yes: OutcomeMarketSide(side: .yes, price: 0.61, volume: 125_400, bestBid: 0.60, bestAsk: 0.62, marketId: nil),
-                no:  OutcomeMarketSide(side: .no,  price: 0.39, volume: 98_200,  bestBid: 0.38, bestAsk: 0.40, marketId: nil)
+                no:  OutcomeMarketSide(side: .no,  price: 0.39, volume: 98_200,  bestBid: 0.38, bestAsk: 0.40, marketId: nil),
+                imgUrl: nil
             ),
             OutcomeMarket(
                 name: "Biden",
                 yes: OutcomeMarketSide(side: .yes, price: 0.28, volume: 89_500, bestBid: 0.27, bestAsk: 0.29, marketId: nil),
-                no:  OutcomeMarketSide(side: .no,  price: 0.72, volume: 143_200, bestBid: 0.71, bestAsk: 0.73, marketId: nil)
+                no:  OutcomeMarketSide(side: .no,  price: 0.72, volume: 143_200, bestBid: 0.71, bestAsk: 0.73, marketId: nil),
+                imgUrl: nil
             ),
             OutcomeMarket(
                 name: "Obama",
                 yes: OutcomeMarketSide(side: .yes, price: 0.08, volume: 22_100, bestBid: 0.07, bestAsk: 0.09, marketId: nil),
-                no:  OutcomeMarketSide(side: .no,  price: 0.92, volume: 64_300, bestBid: 0.91, bestAsk: 0.93, marketId: nil)
+                no:  OutcomeMarketSide(side: .no,  price: 0.92, volume: 64_300, bestBid: 0.91, bestAsk: 0.93, marketId: nil),
+                imgUrl: nil
             )
         ]
 
         let event = EventDetail(
+            id: UUID(),
             title: "Who will win the 2028 US Presidential Election?",
             subtitle: "Major national election with multiple candidates",
             category: .politics,
             timeRemainingText: "200d left",
             description: "Predict the winner. Each outcome has separate Yes and No markets with independent orderbooks. Trade on your beliefs and manage risk with granular markets.",
             imageName: "eventPlaceholder",
+            imgUrl: nil,
             outcomes: outcomes
         )
 
@@ -259,3 +273,4 @@ extension Constants {
         return books
     }()
 }
+

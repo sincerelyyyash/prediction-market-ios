@@ -1,14 +1,14 @@
 import SwiftUI
 
 struct OnboardingCTAView: View {
-    let handlePrimary: () -> Void
-    let handleSecondary: () -> Void
-
+    let handleStartTrading: () -> Void   // Should navigate to Sign In
+    let handleSignUp: () -> Void         // Secondary text link
+    
     var body: some View {
         VStack(spacing: 14) {
-            Button(action: handlePrimary) {
+            Button(action: handleStartTrading) {
                 Text(Constants.onboardinButtonString)
-                    .font(.custom("DMMono-Medium", size: 20))
+                    .font(.dmMonoMedium(size: 20))
                     .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)
@@ -19,14 +19,15 @@ struct OnboardingCTAView: View {
             .padding(.horizontal, 40)
             .accessibilityLabel(Constants.onboardinButtonString)
             .accessibilityAddTraits(.isButton)
-            Button(action: handleSecondary) {
+            
+            Button(action: handleSignUp) {
                 HStack(spacing: 6) {
                     Text("Don’t have an account?")
                         .foregroundColor(.white.opacity(0.8))
                     Text("Sign Up")
                         .foregroundColor(.white)
                 }
-                .font(.custom("DMMono-Light", size: 16))
+                .font(.dmMonoRegular(size: 16))
                 .padding(.vertical, 8)
                 .contentShape(Rectangle())
             }

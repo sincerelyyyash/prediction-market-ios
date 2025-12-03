@@ -10,12 +10,12 @@ struct EventMetaSectionView: View {
                 EventPillView(icon: "clock", text: event.timeRemainingText)
             }
             Text(event.title)
-                .font(.system(size: 22, weight: .bold))
+                .font(.dmMonoMedium(size: 22))
                 .foregroundColor(.white)
                 .lineLimit(3)
             if let subtitle = event.subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.dmMonoRegular(size: 14))
                     .foregroundColor(.white.opacity(0.9))
                     .lineLimit(2)
             }

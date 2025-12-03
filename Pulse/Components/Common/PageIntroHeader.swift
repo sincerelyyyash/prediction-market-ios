@@ -7,12 +7,12 @@ struct PageIntroHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 26, weight: .bold))
+                .font(.dmMonoMedium(size: 26))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(subtitle)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.dmMonoRegular(size: 13))
                 .foregroundColor(.white.opacity(0.75))
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

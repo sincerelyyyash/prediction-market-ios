@@ -10,9 +10,9 @@ struct CategoryChipView: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.dmMonoMedium(size: 13))
                 Text(title)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.dmMonoRegular(size: 13))
             }
             .foregroundColor(isSelected ? .black : .white)
             .padding(.vertical, 8)

@@ -11,7 +11,7 @@ struct ProbabilityPillView: View {
                 .fill(color)
                 .frame(width: 8, height: 8)
             Text("\(label) \(percentageText)")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.dmMonoMedium(size: 12))
         }
         .foregroundColor(.white)
         .padding(.vertical, 6)

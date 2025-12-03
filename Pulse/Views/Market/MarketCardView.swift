@@ -30,11 +30,11 @@ struct MarketCardView: View {
     private var header: some View {
         HStack {
             Label(content.categoryTitle, systemImage: content.categoryIconName)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.dmMonoMedium(size: 12))
                 .foregroundColor(.white.opacity(0.8))
             Spacer()
             Text(content.timeRemainingText)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.dmMonoMedium(size: 12))
                 .foregroundColor(.white.opacity(0.8))
         }
     }
@@ -42,12 +42,12 @@ struct MarketCardView: View {
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(content.title)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.dmMonoMedium(size: 17))
                 .foregroundColor(.white)
                 .fixedSize(horizontal: false, vertical: true)
             if let subtitle = content.subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.dmMonoRegular(size: 13))
                     .foregroundColor(.white.opacity(0.75))
                     .lineLimit(2)
             }
@@ -57,7 +57,7 @@ struct MarketCardView: View {
     private var leadingOutcomeHint: some View {
         HStack(spacing: 8) {
             Text("Trading \(content.leadingOutcomeName) — top market right now")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.dmMonoRegular(size: 12))
                 .foregroundColor(.white.opacity(0.72))
                 .lineLimit(1)
             Spacer()
@@ -91,7 +91,7 @@ struct MarketCardView: View {
             handleOpen()
         } label: {
             Text(title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.dmMonoMedium(size: 15))
                 .foregroundColor(foreground)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)

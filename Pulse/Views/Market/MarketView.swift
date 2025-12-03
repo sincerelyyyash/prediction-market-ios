@@ -62,10 +62,10 @@ struct MarketView: View {
         } else if let errorMessage {
             VStack(spacing: 12) {
                 Text("Unable to load markets")
-                    .font(.headline)
+                    .font(.dmMonoMedium(size: 17))
                     .foregroundColor(.white)
                 Text(errorMessage)
-                    .font(.subheadline)
+                    .font(.dmMonoRegular(size: 15))
                     .foregroundColor(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                 Button("Try Again", action: { Task { await loadEvents() } })
@@ -193,10 +193,10 @@ private struct MarketEventDetailView: View {
             } else if let errorMessage {
                 VStack(spacing: 12) {
                     Text("Unable to load event")
-                        .font(.headline)
+                        .font(.dmMonoMedium(size: 17))
                         .foregroundColor(.white)
                     Text(errorMessage)
-                        .font(.subheadline)
+                        .font(.dmMonoRegular(size: 15))
                         .foregroundColor(.white.opacity(0.7))
                         .multilineTextAlignment(.center)
                     Button("Retry") {

@@ -34,7 +34,7 @@ struct CompactActionButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.dmMonoMedium(size: 13))
                 .foregroundColor(style.text)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 10)
