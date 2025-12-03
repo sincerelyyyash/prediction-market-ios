@@ -7,9 +7,8 @@ enum APIEnvironment {
     var baseURLString: String {
         switch self {
         case .development:
-            return "http://127.0.0.1:8000"
+           return "http://127.0.0.1:8000"
         case .production:
-            // Update when production backend is available.
             return "http://127.0.0.1:8000"
         }
     }
@@ -21,7 +20,7 @@ struct APIConfiguration {
     let environment: APIEnvironment
     let requestTimeout: TimeInterval = 10
 
-    private init(environment: APIEnvironment = .development) {
+    private init(environment: APIEnvironment = .production) {
         self.environment = environment
     }
 
@@ -75,7 +74,11 @@ enum APIPath {
         static func tradesByUser(_ userId: UInt64) -> String { "/trades/user/\(userId)" }
 
         // Users
-        static func userById(_ userId: UInt64) -> String { "/users/\(userId)" }
+        static func userById(_ userId: Int64) -> String { "/users/\(userId)" }
+
+        // Bookmarks & For You
+        static let bookmarks = "/user/bookmarks"
+        static let forYou = "/user/markets/for-you"
     }
 }
 

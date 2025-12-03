@@ -82,7 +82,8 @@ final class NetworkClient {
         }
 
         do {
-            return try decoder.decode(Response.self, from: data)
+            let decoded = try decoder.decode(Response.self, from: data)
+            return decoded
         } catch {
             throw APIError.decoding(error)
         }
@@ -102,11 +103,13 @@ final class NetworkClient {
         } catch {
             throw APIError.network(error)
         }
+        // Explicitly call the base send method with Data? to avoid infinite recursion
+        // (Data conforms to Encodable, so without explicit typing it would recursively call this method)
         return try await send(
             path: path,
             method: method,
             queryItems: queryItems,
-            body: encodedBody,
+            body: encodedBody as Data?,
             additionalHeaders: additionalHeaders,
             requiresAuth: requiresAuth
         )
