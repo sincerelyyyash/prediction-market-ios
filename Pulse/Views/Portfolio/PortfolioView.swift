@@ -12,7 +12,7 @@ struct PortfolioView: View {
     @State private var totalPnLValue: Double = 0
     @State private var totalPnLPercent: Double = 0
     @State private var totalBalance: Int64 = 0
-    @State private var positions: [Position] = []
+    @State private var portfolioPositions: [PortfolioPosition] = []
     @State private var openOrders: [Order] = []
     @State private var orderHistory: [Order] = []
     @State private var isLoading = false
@@ -86,14 +86,14 @@ struct PortfolioView: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Total PnL")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.dmMonoRegular(size: 15))
                         .foregroundColor(.white.opacity(0.7))
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text(formattedCurrency(totalPnLValue))
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.dmMonoMedium(size: 28))
                             .foregroundColor(totalPnLValue >= 0 ? Color.green : Color.red)
                         Text("(\(formattedPercent(totalPnLPercent)))")
-                            .font(.headline.weight(.semibold))
+                            .font(.dmMonoMedium(size: 17))
                             .foregroundColor(totalPnLPercent >= 0 ? Color.green.opacity(0.9) : Color.red.opacity(0.9))
                     }
                 }
@@ -153,16 +153,17 @@ struct PortfolioView: View {
         } else if let errorMessage {
             VStack(spacing: 12) {
                 Text("Unable to load portfolio")
-                    .font(.headline)
+                    .font(.dmMonoMedium(size: 17))
                     .foregroundColor(.white)
                 Text(errorMessage)
-                    .font(.subheadline)
+                    .font(.dmMonoRegular(size: 15))
                     .foregroundColor(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                 Button("Retry") {
                     Task { await loadPortfolioData() }
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(.white)
             }
         } else {
             VStack(spacing: 0) {
@@ -180,11 +181,11 @@ struct PortfolioView: View {
                     LazyVStack(spacing: 12) {
                         switch selectedTab {
                         case .positions:
-                            if positions.isEmpty {
+                            if portfolioPositions.isEmpty {
                                 emptyState(message: "No open positions yet.")
                             } else {
-                                ForEach(positions) { position in
-                                    PositionRow(position: position)
+                                ForEach(portfolioPositions) { position in
+                                    PortfolioPositionRow(position: position)
                                 }
                             }
                         case .pending:
@@ -214,7 +215,7 @@ struct PortfolioView: View {
 
     private func emptyState(message: String) -> some View {
         Text(message)
-            .font(.footnote)
+            .font(.dmMonoRegular(size: 13))
             .foregroundColor(.white.opacity(0.7))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 24)
@@ -228,31 +229,22 @@ struct PortfolioView: View {
 
         do {
             async let portfolioTask = PositionService.shared.getPortfolio()
-            async let positionsTask = PositionService.shared.getPositions()
             async let pendingTask = OrderService.shared.getOpenOrders()
             async let historyTask = OrderService.shared.getOrderHistory()
-            let (portfolio, positions, pending, history) = try await (portfolioTask, positionsTask, pendingTask, historyTask)
+            let (portfolio, pending, history) = try await (portfolioTask, pendingTask, historyTask)
             await MainActor.run {
-                self.positions = positions
+                self.portfolioPositions = portfolio.positions ?? []
                 self.openOrders = pending
                 self.orderHistory = history
-                
-                // Calculate PnL from portfolio data
-                // PnL from API is in the same units as balance
-                // Following the same pattern as ProfileView, balance is used directly
                 if let pnl = portfolio.pnl {
                     totalPnLValue = Double(pnl)
                 } else {
                     totalPnLValue = 0
                 }
-                
-                // Calculate PnL percentage based on balance
-                // PnL percentage = (PnL / Balance) * 100
                 if let balance = portfolio.balance, balance != 0 {
                     let balanceValue = Double(balance)
                     totalPnLPercent = (totalPnLValue / balanceValue) * 100.0
                 } else if let totalValue = portfolio.totalValue, totalValue != 0 {
-                    // Fallback: calculate percentage based on total value if balance is not available
                     let totalValueDouble = Double(totalValue)
                     totalPnLPercent = (totalPnLValue / totalValueDouble) * 100.0
                 } else {
@@ -263,6 +255,24 @@ struct PortfolioView: View {
                 isLoading = false
             }
         } catch {
+            if let apiError = error as? APIError {
+                if case let .server(_, message) = apiError,
+                   let message,
+                   message.localizedCaseInsensitiveContains("failed to get balance"),
+                   message.localizedCaseInsensitiveContains("user not found") {
+                    await MainActor.run {
+                        portfolioPositions = []
+                        openOrders = []
+                        orderHistory = []
+                        totalPnLValue = 0
+                        totalPnLPercent = 0
+                        totalBalance = 0
+                        isLoading = false
+                        errorMessage = nil
+                    }
+                    return
+                }
+            }
             await MainActor.run {
                 isLoading = false
                 errorMessage = error.localizedDescription
@@ -273,26 +283,33 @@ struct PortfolioView: View {
 
 // MARK: - Rows
 
-private struct PositionRow: View {
-    let position: Position
+private struct PortfolioPositionRow: View {
+    let position: PortfolioPosition
+
+    private var formattedValue: String {
+        guard let value = position.value else { return "--" }
+        return "$\(value)"
+    }
+
+    private var formattedPrice: String {
+        guard let price = position.marketPrice else { return "--" }
+        return "\(price)¢"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("Market \(position.marketId)")
-                    .font(.headline.weight(.semibold))
+                    .font(.dmMonoMedium(size: 17))
                     .foregroundColor(.white)
                 Spacer()
                 Text("Qty: \(position.quantity)")
-                    .font(.headline.weight(.semibold))
+                    .font(.dmMonoMedium(size: 17))
                     .foregroundColor(.white)
             }
-            Text("Updated \(position.updatedAt ?? "--")")
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.65))
             HStack(spacing: 10) {
-                statChip(title: "User", value: "\(position.userId)")
-                statChip(title: "Created", value: position.createdAt ?? "--")
+                statChip(title: "Price", value: formattedPrice)
+                statChip(title: "Value", value: formattedValue)
                 Spacer()
             }
         }
@@ -306,13 +323,14 @@ private struct PositionRow: View {
                 )
         )
     }
+
     private func statChip(title: String, value: String) -> some View {
         HStack(spacing: 6) {
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(.dmMonoRegular(size: 12))
                 .foregroundColor(.white.opacity(0.7))
             Text(value)
-                .font(.caption.weight(.bold))
+                .font(.dmMonoMedium(size: 12))
                 .foregroundColor(.white)
         }
         .padding(.horizontal, 8)
@@ -331,13 +349,13 @@ private struct OrderRow: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Text(order.side.rawValue.uppercased())
-                    .font(.headline.weight(.semibold))
+                    .font(.dmMonoMedium(size: 17))
                     .foregroundColor(.white)
                 Spacer()
                 statusBadge
             }
             Text("Market \(order.marketId)")
-                .font(.subheadline)
+                .font(.dmMonoRegular(size: 15))
                 .foregroundColor(.white.opacity(0.65))
             HStack(spacing: 10) {
                 statChip(title: "Qty", value: "\(order.originalQuantity)")
@@ -359,7 +377,7 @@ private struct OrderRow: View {
 
     private var statusBadge: some View {
         Text(order.status ?? "Pending")
-            .font(.caption.weight(.semibold))
+            .font(.dmMonoRegular(size: 12))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(
@@ -383,10 +401,10 @@ private struct OrderRow: View {
     private func statChip(title: String, value: String) -> some View {
         HStack(spacing: 6) {
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(.dmMonoRegular(size: 12))
                 .foregroundColor(.white.opacity(0.7))
             Text(value)
-                .font(.caption.weight(.bold))
+                .font(.dmMonoMedium(size: 12))
                 .foregroundColor(.white)
         }
         .padding(.horizontal, 8)

@@ -5,6 +5,8 @@ struct EventView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showingOrderbookFor: OutcomeMarket?
+    @State private var showingTicketConfig: OrderTicketConfig?
+    @State private var orderbookInitialSide: MarketSideType = .yes
 
     var body: some View {
         GeometryReader { geo in
@@ -16,7 +18,8 @@ struct EventView: View {
                             .padding(.horizontal, 16)
                             .padding(.top, 10)
                         EventHeroImageView(
-                            imageName: "eventPlaceholder",
+                            imageName: event.imageName,
+                            imgUrl: event.imgUrl,
                             availableWidth: geo.size.width
                         )
                         .padding(.horizontal, 16)
@@ -27,7 +30,34 @@ struct EventView: View {
                         OutcomeListView(
                             outcomes: event.outcomes,
                             handleOpenOrderbook: { outcome in
+                                orderbookInitialSide = .yes
                                 showingOrderbookFor = outcome
+                            },
+                            handleOpenYesOrderbook: { outcome in
+                                orderbookInitialSide = .yes
+                                showingOrderbookFor = outcome
+                            },
+                            handleOpenNoOrderbook: { outcome in
+                                orderbookInitialSide = .no
+                                showingOrderbookFor = outcome
+                            },
+                            handleOpenYesTicket: { outcome in
+                                let config = OrderTicketConfig(
+                                    outcome: outcome,
+                                    side: .yes,
+                                    isBuy: true,
+                                    initialPrice: outcome.yes.price
+                                )
+                                showingTicketConfig = config
+                            },
+                            handleOpenNoTicket: { outcome in
+                                let config = OrderTicketConfig(
+                                    outcome: outcome,
+                                    side: .no,
+                                    isBuy: true,
+                                    initialPrice: outcome.no.price
+                                )
+                                showingTicketConfig = config
                             }
                         )
                         .padding(.horizontal, 16)
@@ -35,13 +65,29 @@ struct EventView: View {
                     }
                 }
                 .sheet(item: $showingOrderbookFor) { outcome in
-                    OrderbookView(eventID: event.id, outcome: outcome)
+                    OrderbookView(
+                        eventID: event.id,
+                        outcome: outcome,
+                        initialSide: orderbookInitialSide
+                    )
                         .preferredColorScheme(.dark)
                         .presentationContentInteraction(.scrolls)
                         .presentationBackgroundInteraction(.enabled)
                         .presentationDragIndicator(.visible)
                         .presentationDetents([.fraction(0.8), .large])
                         .presentationBackground(.black)
+                }
+                .sheet(item: $showingTicketConfig) { config in
+                    OrderTicketView(
+                        config: config,
+                        handleDismiss: {
+                            showingTicketConfig = nil
+                        }
+                    )
+                    .preferredColorScheme(.dark)
+                    .presentationDetents([.fraction(0.55), .large])
+                    .presentationDragIndicator(.visible)
+                    .presentationBackground(.black)
                 }
             }
         }

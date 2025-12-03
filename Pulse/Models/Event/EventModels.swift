@@ -31,9 +31,10 @@ struct EventDTO: Decodable, Identifiable, Equatable {
     let createdBy: UInt64?
     let outcomes: [EventOutcomeDTO]?
     let winningOutcomeId: UInt64?
+    let imgUrl: String?
 
     private enum CodingKeys: String, CodingKey {
-        case id = "event_id"
+        case id
         case slug
         case title
         case description
@@ -43,6 +44,7 @@ struct EventDTO: Decodable, Identifiable, Equatable {
         case createdBy = "created_by"
         case outcomes
         case winningOutcomeId = "winning_outcome_id"
+        case imgUrl = "img_url"
     }
 }
 
@@ -54,15 +56,17 @@ struct EventOutcomeDTO: Decodable, Identifiable, Equatable {
     let yesMarketId: UInt64?
     let noMarketId: UInt64?
     let markets: [EventOutcomeMarketDTO]?
+    let imgUrl: String?
 
     private enum CodingKeys: String, CodingKey {
-        case id = "outcome_id"
+        case id
         case eventId = "event_id"
         case name
         case status
         case yesMarketId = "yes_market_id"
         case noMarketId = "no_market_id"
         case markets
+        case imgUrl = "img_url"
     }
 }
 
@@ -106,6 +110,7 @@ struct EventCoreDTO: Decodable {
     let resolvedAt: String?
     let winningOutcomeId: UInt64?
     let createdBy: UInt64?
+    let imgUrl: String?
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -117,6 +122,7 @@ struct EventCoreDTO: Decodable {
         case resolvedAt = "resolved_at"
         case winningOutcomeId = "winning_outcome_id"
         case createdBy = "created_by"
+        case imgUrl = "img_url"
     }
 }
 

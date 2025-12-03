@@ -27,16 +27,14 @@ final class UserService {
         )
     }
 
-    func getUser(by id: UInt64) async throws -> UserProfile {
-        let response: UserResponse = try await client.send(
+    func getUser(by id: Int64) async throws -> UserProfile {
+        // Backend now returns user profile directly (not wrapped in a user field)
+        let profile: UserProfile = try await client.send(
             path: APIPath.Authenticated.userById(id),
             method: .get,
             requiresAuth: true
         )
-        guard let user = response.user else {
-            throw APIError.server(statusCode: 404, message: "User not found")
-        }
-        return user
+        return profile
     }
 }
 

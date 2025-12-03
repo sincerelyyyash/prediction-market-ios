@@ -40,14 +40,12 @@ final class PositionService {
     }
 
     func getPortfolio() async throws -> PortfolioSnapshot {
-        let response: PortfolioResponse = try await client.send(
+        // Portfolio endpoint returns the snapshot directly (not wrapped in a data field)
+        let snapshot: PortfolioSnapshot = try await client.send(
             path: APIPath.Authenticated.portfolio,
             method: .get,
             requiresAuth: true
         )
-        guard let snapshot = response.data else {
-            throw APIError.decoding(NSError(domain: "Portfolio", code: -1))
-        }
         return snapshot
     }
 }

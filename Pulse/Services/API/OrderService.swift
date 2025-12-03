@@ -77,12 +77,12 @@ final class OrderService {
     }
 
     func getOrderHistory() async throws -> [Order] {
-        let envelope: APIEnvelope<[Order]> = try await client.send(
+        let response: OrderListResponse = try await client.send(
             path: APIPath.Authenticated.orderHistory,
             method: .get,
             requiresAuth: true
         )
-        return try envelope.requireData()
+        return response.orders
     }
 
     func getOrdersByUser(_ userId: UInt64) async throws -> [Order] {
@@ -102,5 +102,15 @@ final class OrderService {
         )
         return response.orders
     }
+}
+
+// MARK: - Helper Response Types
+
+/// Order history endpoint payload: `/orders/history`
+private struct OrderListResponse: Decodable {
+    let status: String?
+    let message: String?
+    let orders: [Order]
+    let count: Int?
 }
 

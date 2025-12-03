@@ -6,10 +6,18 @@ struct OutcomeRowView: View {
     let handleBuyNo: () -> Void
     let handleOpenOrderbook: () -> Void
 
+    private var isYesTradable: Bool {
+        outcome.yes.marketId != nil
+    }
+
+    private var isNoTradable: Bool {
+        outcome.no.marketId != nil
+    }
+
     var body: some View {
         HStack(spacing: 10) {
             Text(outcome.name)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.dmMonoMedium(size: 15))
                 .foregroundColor(.white)
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -18,11 +26,15 @@ struct OutcomeRowView: View {
                 style: .yes,
                 action: handleBuyYes
             )
+            .disabled(!isYesTradable)
+            .opacity(isYesTradable ? 1 : 0.4)
             CompactActionButton(
                 title: "No \(percentageText(outcome.no.price))",
                 style: .no,
                 action: handleBuyNo
             )
+            .disabled(!isNoTradable)
+            .opacity(isNoTradable ? 1 : 0.4)
         }
         .padding(12)
         .background(

@@ -18,6 +18,23 @@ struct Position: Decodable, Identifiable, Equatable {
     }
 }
 
+/// Position as returned by the portfolio endpoint (different shape from positions endpoint)
+struct PortfolioPosition: Decodable, Identifiable, Equatable {
+    let marketId: Int64
+    let quantity: Int64
+    let marketPrice: Int64?
+    let value: Int64?
+
+    var id: Int64 { marketId }
+
+    private enum CodingKeys: String, CodingKey {
+        case marketId = "market_id"
+        case quantity
+        case marketPrice = "market_price"
+        case value
+    }
+}
+
 struct PositionsResponse: Decodable {
     let status: String?
     let message: String?
@@ -25,11 +42,12 @@ struct PositionsResponse: Decodable {
     let count: Int?
 }
 
+/// Portfolio snapshot returned directly from the portfolio endpoint
 struct PortfolioSnapshot: Decodable {
     let balance: Int64?
     let totalValue: Int64?
     let pnl: Int64?
-    let positions: [Position]?
+    let positions: [PortfolioPosition]?
 
     private enum CodingKeys: String, CodingKey {
         case balance
@@ -37,11 +55,5 @@ struct PortfolioSnapshot: Decodable {
         case pnl
         case positions
     }
-}
-
-struct PortfolioResponse: Decodable {
-    let status: String?
-    let message: String?
-    let data: PortfolioSnapshot?
 }
 

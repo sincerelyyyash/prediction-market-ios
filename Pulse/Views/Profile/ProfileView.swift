@@ -3,7 +3,6 @@ import SwiftUI
 struct ProfileView: View {
     private enum ProfileRoute: Hashable {
         case addFunds
-        case withdraw
     }
 
     @StateObject private var authService = AuthService.shared
@@ -13,6 +12,7 @@ struct ProfileView: View {
     @State private var path: [ProfileRoute] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var requiresAuth = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -26,8 +26,6 @@ struct ProfileView: View {
                 switch route {
                 case .addFunds:
                     AddFundsScreen(balance: $balance, handleSubmit: handleOnramp)
-                case .withdraw:
-                    WithdrawFundsScreen(balance: $balance)
                 }
             }
         }
@@ -39,11 +37,11 @@ struct ProfileView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Profile")
-                .font(.system(size: 26, weight: .bold))
+                .font(.dmMonoMedium(size: 26))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text("Manage your account and preferences")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.dmMonoRegular(size: 13))
                 .foregroundColor(.white.opacity(0.75))
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -53,14 +51,14 @@ struct ProfileView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text("Current Balance")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.dmMonoRegular(size: 14))
                     .foregroundColor(.white.opacity(0.7))
                 Spacer()
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(formattedCurrency(balance))
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .font(.dmMonoMedium(size: 30))
                     .foregroundColor(.white)
                 Spacer()
             }
@@ -92,13 +90,13 @@ struct ProfileView: View {
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(userProfile?.name ?? "Trader")
-                    .font(.headline.weight(.semibold))
+                    .font(.dmMonoMedium(size: 17))
                     .foregroundColor(.white)
                 Text(userProfile?.email ?? "--")
-                    .font(.subheadline)
+                    .font(.dmMonoRegular(size: 15))
                     .foregroundColor(.white.opacity(0.7))
                 Text(memberSince)
-                    .font(.footnote)
+                    .font(.dmMonoRegular(size: 13))
                     .foregroundColor(.white.opacity(0.6))
             }
             Spacer()
@@ -127,24 +125,10 @@ struct ProfileView: View {
             ) { path.append(.addFunds) }
 
             actionRow(
-                title: "Withdraw Funds",
-                subtitle: "Transfer funds to your bank",
-                icon: "arrow.up.right.circle.fill",
-                tint: .blue
-            ) { path.append(.withdraw) }
-
-            actionRow(
                 title: "Transaction History",
                 subtitle: "View deposits and withdrawals",
                 icon: "clock.fill",
                 tint: .yellow
-            ) {}
-
-            actionRow(
-                title: "Settings",
-                subtitle: "Security, notifications, preferences",
-                icon: "gearshape.fill",
-                tint: .gray
             ) {}
 
             actionRow(
@@ -168,10 +152,10 @@ struct ProfileView: View {
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Logout")
-                            .font(.headline.weight(.semibold))
+                            .font(.dmMonoMedium(size: 17))
                             .foregroundColor(.red)
                         Text("Sign out of your account")
-                            .font(.footnote)
+                            .font(.dmMonoRegular(size: 13))
                             .foregroundColor(.white.opacity(0.6))
                     }
                     Spacer()
@@ -202,14 +186,14 @@ struct ProfileView: View {
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(tint)
                 }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(.white)
-                    Text(subtitle)
-                        .font(.footnote)
-                        .foregroundColor(.white.opacity(0.6))
-                }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.dmMonoMedium(size: 17))
+                            .foregroundColor(.white)
+                        Text(subtitle)
+                            .font(.dmMonoRegular(size: 13))
+                            .foregroundColor(.white.opacity(0.6))
+                    }
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
@@ -261,19 +245,38 @@ struct ProfileView: View {
             ProgressView("Loading profile...")
                 .progressViewStyle(.circular)
                 .tint(.white)
+        } else if requiresAuth {
+            VStack(spacing: 12) {
+                Text("Sign in to view your profile")
+                    .font(.dmMonoMedium(size: 17))
+                    .foregroundColor(.white)
+                Text("Your session has expired or no account is currently signed in.")
+                    .font(.dmMonoRegular(size: 15))
+                    .foregroundColor(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                Button("Go to Sign In") {
+                    // Clear any existing token and let RootView switch to Onboarding
+                    handleLogout()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.white)
+            }
         } else if let errorMessage {
             VStack(spacing: 12) {
                 Text("Unable to load profile")
-                    .font(.headline)
+                    .font(.dmMonoMedium(size: 17))
                     .foregroundColor(.white)
                 Text(errorMessage)
-                    .font(.subheadline)
+                    .font(.dmMonoRegular(size: 15))
                     .foregroundColor(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
                 Button("Retry") {
                     Task { await refreshProfile() }
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(.white)
             }
         } else {
             ScrollView {
@@ -298,26 +301,43 @@ struct ProfileView: View {
     }
 
     private func refreshProfile() async {
-        guard let userId = authService.session?.user.id else {
-            await MainActor.run {
-                errorMessage = "Please sign in to view your profile."
-            }
-            return
-        }
-
         await MainActor.run {
             isLoading = true
             errorMessage = nil
+            requiresAuth = false
         }
 
         do {
-            async let profileTask = UserService.shared.getUser(by: userId)
-            async let balanceTask = UserService.shared.getBalance()
-            let (profile, balanceResponse) = try await (profileTask, balanceTask)
+            guard let userId = authService.session?.user.id else {
+                await MainActor.run {
+                    isLoading = false
+                    requiresAuth = true
+                }
+                return
+            }
+
+            let profile = try await UserService.shared.getUser(by: Int64(userId))
+            
+            var fetchedBalance: Int64? = nil
+            do {
+                let balanceResponse = try await UserService.shared.getBalance()
+                fetchedBalance = balanceResponse.balance
+            } catch {
+                if let apiError = error as? APIError,
+                   case let .server(_, message) = apiError,
+                   let message,
+                   message.localizedCaseInsensitiveContains("failed to get balance"),
+                   message.localizedCaseInsensitiveContains("user not found") {
+                    fetchedBalance = 0
+                } else {
+                    throw error
+                }
+            }
+            
             await MainActor.run {
                 userProfile = profile
                 memberSince = "Member since \(Calendar.current.component(.year, from: Date()))"
-                balance = Double(balanceResponse.balance ?? 0)
+                balance = Double(fetchedBalance ?? 0)
                 isLoading = false
             }
         } catch {
@@ -372,7 +392,7 @@ private struct AddFundsScreen: View {
                         Spacer(minLength: 8)
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Deposit to your trading balance")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.dmMonoRegular(size: 14))
                                 .foregroundColor(.white.opacity(0.75))
                         }
                         .padding(.horizontal, 16)
@@ -382,7 +402,7 @@ private struct AddFundsScreen: View {
 
                         if let errorMessage {
                             Text(errorMessage)
-                                .font(.footnote)
+                                .font(.dmMonoRegular(size: 13))
                                 .foregroundColor(.red)
                                 .padding(.horizontal, 16)
                         }
@@ -406,15 +426,15 @@ private struct AddFundsScreen: View {
     private var amountCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Amount (USD)")
-                .font(.subheadline.weight(.semibold))
+                .font(.dmMonoRegular(size: 15))
                 .foregroundColor(.white.opacity(0.75))
             HStack(spacing: 10) {
                 Text("$")
-                    .font(.title3.weight(.semibold))
+                    .font(.dmMonoMedium(size: 20))
                     .foregroundColor(.white.opacity(0.85))
                 TextField("0.00", text: $amountText)
                     .keyboardType(.decimalPad)
-                    .font(.title3.weight(.semibold))
+                    .font(.dmMonoMedium(size: 20))
                     .foregroundColor(.white)
             }
             .padding(.vertical, 10)
@@ -433,7 +453,7 @@ private struct AddFundsScreen: View {
     private func primaryButton(title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.headline.weight(.semibold))
+                .font(.dmMonoMedium(size: 17))
                 .foregroundColor(.black)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
@@ -501,7 +521,7 @@ private struct WithdrawFundsScreen: View {
                         Spacer(minLength: 8)
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Transfer funds to your bank")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.dmMonoRegular(size: 14))
                                 .foregroundColor(.white.opacity(0.75))
                         }
                         .padding(.horizontal, 16)
@@ -523,15 +543,15 @@ private struct WithdrawFundsScreen: View {
     private var amountCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Amount (USD)")
-                .font(.subheadline.weight(.semibold))
+                .font(.dmMonoRegular(size: 15))
                 .foregroundColor(.white.opacity(0.75))
             HStack(spacing: 10) {
                 Text("$")
-                    .font(.title3.weight(.semibold))
+                    .font(.dmMonoMedium(size: 20))
                     .foregroundColor(.white.opacity(0.85))
                 TextField("0.00", text: $amountText)
                     .keyboardType(.decimalPad)
-                    .font(.title3.weight(.semibold))
+                    .font(.dmMonoMedium(size: 20))
                     .foregroundColor(.white)
             }
             .padding(.vertical, 10)
@@ -550,7 +570,7 @@ private struct WithdrawFundsScreen: View {
     private func primaryButton(title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.headline.weight(.semibold))
+                .font(.dmMonoMedium(size: 17))
                 .foregroundColor(.black)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)

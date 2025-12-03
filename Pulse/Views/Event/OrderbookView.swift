@@ -4,14 +4,37 @@ struct OrderbookView: View {
     let eventID: UUID
     let outcome: OutcomeMarket
 
-    @State private var selectedSide: MarketSideType = .yes
+    @State private var selectedSide: MarketSideType
     @State private var levelCount = 10
-    @State private var orderbook: DemoOrderbook?
+    @State private var orderbooksBySide: [MarketSideType: DemoOrderbook] = [:]
     @State private var isLoading = false
-    @State private var errorMessage: String?
+    @State private var hasLoadedOnce = false
+    @State private var orderbookErrorMessage: String?
+    @State private var ticketConfig: OrderTicketConfig?
+    
+    // Split / Merge state
+    @State private var showSplitSheet = false
+    @State private var showMergeSheet = false
+    @State private var splitAmountText = ""
+    @State private var isSubmittingAdvanced = false
+    @State private var advancedErrorMessage: String?
+    @State private var advancedSuccessMessage: String?
+    @State private var splitDirectionIsYesToNo = true
+    @State private var showAdvancedAlert = false
+    @State private var advancedAlertMessage: String?
 
-    private var currentMarketId: UInt64? {
-        selectedSide == .yes ? outcome.yes.marketId : outcome.no.marketId
+    init(
+        eventID: UUID,
+        outcome: OutcomeMarket,
+        initialSide: MarketSideType = .yes
+    ) {
+        self.eventID = eventID
+        self.outcome = outcome
+        _selectedSide = State(initialValue: initialSide)
+    }
+
+    private func marketId(for side: MarketSideType) -> UInt64? {
+        side == .yes ? outcome.yes.marketId : outcome.no.marketId
     }
 
     private var topOfBookBid: Double {
@@ -22,11 +45,15 @@ struct OrderbookView: View {
         selectedSide == .yes ? outcome.yes.bestAsk : outcome.no.bestAsk
     }
 
-    private var book: DemoOrderbook {
-        if let fetchedBook = orderbook {
-            return expand(book: fetchedBook, to: levelCount)
+    private var book: DemoOrderbook? {
+        guard let fetchedBook = orderbooksBySide[selectedSide] else {
+            return nil
         }
-        return fallbackLadder(steps: levelCount)
+        return expand(book: fetchedBook, to: levelCount)
+    }
+    
+    private var hasBothMarkets: Bool {
+        outcome.yes.marketId != nil && outcome.no.marketId != nil
     }
 
     var body: some View {
@@ -35,28 +62,12 @@ struct OrderbookView: View {
             header
             levelSelector
             
-            if isLoading {
+            if isLoading && !hasLoadedOnce {
                 ProgressView("Loading orderbook...")
                     .progressViewStyle(.circular)
                     .tint(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 40)
-            } else if let errorMessage {
-                VStack(spacing: 8) {
-                    Text("Unable to load orderbook")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.7))
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.5))
-                    Button("Retry") {
-                        Task { await loadOrderbook() }
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
             } else {
                 ladderHeader
                 ladderBody
@@ -70,42 +81,49 @@ struct OrderbookView: View {
         .background(Color.black)
         .ignoresSafeArea()
         .task {
-            await loadOrderbook()
-        }
-        .onChange(of: selectedSide) { _ in
-            Task {
-                await loadOrderbook()
+            await loadAllOrderbooks(isInitial: true)
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                await loadAllOrderbooks(isInitial: false)
             }
         }
     }
     
-    private func loadOrderbook() async {
-        guard let marketId = currentMarketId else {
-            await MainActor.run {
-                orderbook = nil
-                isLoading = false
-                errorMessage = "Market ID not available"
-            }
-            return
-        }
-        
+    private func loadAllOrderbooks(isInitial: Bool) async {
+        let sides: [MarketSideType] = [.yes, .no]
+
         await MainActor.run {
-            isLoading = true
-            errorMessage = nil
-        }
-        
-        do {
-            let snapshot = try await OrderbookService.shared.getOrderbook(for: marketId)
-            let mappedBook = mapOrderbookSnapshotToDemoOrderbook(snapshot)
-            await MainActor.run {
-                orderbook = mappedBook
-                isLoading = false
+            if isInitial {
+                isLoading = true
+                advancedErrorMessage = nil
+                advancedSuccessMessage = nil
+                orderbookErrorMessage = nil
             }
-        } catch {
-            await MainActor.run {
+        }
+
+        for side in sides {
+            guard let marketId = marketId(for: side) else {
+                continue
+            }
+
+            do {
+                let snapshot = try await OrderbookService.shared.getOrderbook(for: marketId)
+                let mappedBook = mapOrderbookSnapshotToDemoOrderbook(snapshot)
+                await MainActor.run {
+                    orderbooksBySide[side] = mappedBook
+                    orderbookErrorMessage = nil
+                }
+            } catch {
+                await MainActor.run {
+                    orderbookErrorMessage = "Orderbook unavailable for this market."
+                }
+            }
+        }
+
+        await MainActor.run {
+            if isInitial {
                 isLoading = false
-                errorMessage = error.localizedDescription
-                orderbook = nil
+                hasLoadedOnce = true
             }
         }
     }
@@ -114,16 +132,16 @@ struct OrderbookView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(outcome.name)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.dmMonoMedium(size: 18))
                     .foregroundColor(.white)
                 Text("Orderbook")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.dmMonoRegular(size: 12))
                     .foregroundColor(.white.opacity(0.7))
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 6) {
                 Text("Side")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.dmMonoRegular(size: 11))
                     .foregroundColor(.white.opacity(0.7))
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 Picker("", selection: $selectedSide) {
@@ -139,7 +157,7 @@ struct OrderbookView: View {
     private var levelSelector: some View {
         HStack(spacing: 8) {
             Text("Levels")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.dmMonoRegular(size: 12))
                 .foregroundColor(.white.opacity(0.75))
             levelButton(10)
             levelButton(20)
@@ -151,15 +169,15 @@ struct OrderbookView: View {
     private var ladderHeader: some View {
         HStack {
             Text("Bids (Qty)")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.dmMonoRegular(size: 11))
                 .foregroundColor(.green)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text("Price")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.dmMonoRegular(size: 11))
                 .foregroundColor(.white.opacity(0.85))
                 .frame(width: 70)
             Text("Asks (Qty)")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.dmMonoRegular(size: 11))
                 .foregroundColor(.red)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
@@ -174,24 +192,55 @@ struct OrderbookView: View {
     }
 
     private var ladderBody: some View {
-        let bids = book.bids
-        let asks = book.asks
+        let bids = book?.bids ?? []
+        let asks = book?.asks ?? []
         let maxQty = max(bids.map(\.size).max() ?? 1, asks.map(\.size).max() ?? 1)
+        let hasDepth = !(bids.isEmpty && asks.isEmpty)
 
         return VStack(spacing: 4) {
-            ForEach(0..<max(bids.count, asks.count), id: \.self) { index in
-                let bid = index < bids.count ? bids[index] : nil
-                let ask = index < asks.count ? asks[index] : nil
-                HStack(spacing: 8) {
-                    bidView(bid, maxQty: maxQty)
-                    Text(centerPriceText(bid: bid?.price, ask: ask?.price))
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 70)
-                    askView(ask, maxQty: maxQty)
+            if hasDepth {
+                ForEach(0..<max(bids.count, asks.count), id: \.self) { index in
+                    let bid = index < bids.count ? bids[index] : nil
+                    let ask = index < asks.count ? asks[index] : nil
+                    HStack(spacing: 8) {
+                        bidView(bid, maxQty: maxQty)
+                        Text(centerPriceText(bid: bid?.price, ask: ask?.price))
+                            .font(.dmMonoMedium(size: 12))
+                            .foregroundColor(.white)
+                            .frame(width: 70)
+                        askView(ask, maxQty: maxQty)
+                    }
                 }
+            } else {
+                VStack(spacing: 8) {
+                    if let orderbookErrorMessage {
+                        Text(orderbookErrorMessage)
+                            .font(.dmMonoRegular(size: 13))
+                            .foregroundColor(.white.opacity(0.85))
+                            .multilineTextAlignment(.center)
+                        Button {
+                            Task {
+                                await loadAllOrderbooks(isInitial: true)
+                            }
+                        } label: {
+                            Text("Retry")
+                                .font(.dmMonoMedium(size: 13))
+                        }
+                    } else {
+                        Text("No orders in the orderbook yet")
+                            .font(.dmMonoRegular(size: 13))
+                            .foregroundColor(.white.opacity(0.75))
+                        Text("You can still use Split and Merge below to rebalance existing positions.")
+                            .font(.dmMonoRegular(size: 11))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 32)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .top)
+        .frame(minHeight: 260, alignment: .top)
         .padding(8)
         .background(Color.white.opacity(0.04))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -208,7 +257,7 @@ struct OrderbookView: View {
                     .fill(Color.green.opacity(0.25))
                     .frame(width: depthWidth(bid.size, maxQty: maxQty), height: 28)
                 Text(shortSize(bid.size))
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.dmMonoMedium(size: 12))
                     .foregroundColor(.green)
                     .padding(.horizontal, 8)
             }
@@ -227,8 +276,8 @@ struct OrderbookView: View {
                     .fill(Color.red.opacity(0.25))
                     .frame(width: depthWidth(ask.size, maxQty: maxQty), height: 28)
                     .frame(maxWidth: .infinity, alignment: .trailing)
-                Text(shortSize(ask.size))
-                    .font(.system(size: 12, weight: .semibold))
+                    Text(shortSize(ask.size))
+                    .font(.dmMonoMedium(size: 12))
                     .foregroundColor(.red)
                     .padding(.horizontal, 8)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -238,44 +287,138 @@ struct OrderbookView: View {
     }
 
     private var actionButtons: some View {
-        HStack(spacing: 12) {
-            Button {
-                // hook buy action
-            } label: {
-                HStack {
-                    Image(systemName: "cart.fill.badge.plus")
-                        .font(.system(size: 14, weight: .bold))
-                    Text(selectedSide == .yes ? "Buy Yes" : "Buy No")
-                        .font(.system(size: 15, weight: .semibold))
+        VStack(spacing: 10) {
+            let canSplitMerge = hasBothMarkets
+            HStack(spacing: 12) {
+                Button {
+                    let initialPrice = selectedSide == .yes ? outcome.yes.bestAsk : outcome.no.bestAsk
+                    ticketConfig = OrderTicketConfig(
+                        outcome: outcome,
+                        side: selectedSide,
+                        isBuy: true,
+                        initialPrice: initialPrice
+                    )
+                } label: {
+                    HStack {
+                        Image(systemName: "cart.fill.badge.plus")
+                            .font(.dmMonoMedium(size: 14))
+                        Text(selectedSide == .yes ? "Buy Yes" : "Buy No")
+                            .font(.dmMonoMedium(size: 15))
+                    }
+                    .foregroundColor(selectedSide == .yes ? .black : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(selectedSide == .yes ? Color.green : Color.red)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
-                .foregroundColor(selectedSide == .yes ? .black : .white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(selectedSide == .yes ? Color.green : Color.red)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-            .buttonStyle(.plain)
+                .buttonStyle(.plain)
+                .disabled(marketId(for: selectedSide) == nil)
+                .opacity(marketId(for: selectedSide) == nil ? 0.4 : 1)
 
-            Button {
-                // hook sell action
-            } label: {
-                HStack {
-                    Image(systemName: "arrow.uturn.down")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("Sell")
-                        .font(.system(size: 15, weight: .semibold))
+                Button {
+                    let initialPrice = selectedSide == .yes ? outcome.yes.bestBid : outcome.no.bestBid
+                    ticketConfig = OrderTicketConfig(
+                        outcome: outcome,
+                        side: selectedSide,
+                        isBuy: false,
+                        initialPrice: initialPrice
+                    )
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.uturn.down")
+                            .font(.dmMonoMedium(size: 14))
+                        Text("Sell")
+                            .font(.dmMonoMedium(size: 15))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.white.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Color.white.opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .buttonStyle(.plain)
+                .disabled(marketId(for: selectedSide) == nil)
+                .opacity(marketId(for: selectedSide) == nil ? 0.4 : 1)
             }
-            .buttonStyle(.plain)
+            
+            HStack(spacing: 10) {
+                Button {
+                    advancedErrorMessage = nil
+                    advancedSuccessMessage = nil
+                    splitAmountText = ""
+                    splitDirectionIsYesToNo = true
+                    showSplitSheet = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.triangle.branch")
+                            .font(.dmMonoMedium(size: 12))
+                        Text("Split")
+                            .font(.dmMonoMedium(size: 13))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.white.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Split position")
+                .disabled(!canSplitMerge)
+                .opacity(canSplitMerge ? 1 : 0.4)
+                
+                Button {
+                    advancedErrorMessage = nil
+                    advancedSuccessMessage = nil
+                    showMergeSheet = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.stack.3d.down.right")
+                            .font(.dmMonoMedium(size: 12))
+                        Text("Merge")
+                            .font(.dmMonoMedium(size: 13))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.white.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Merge positions")
+                .disabled(!canSplitMerge)
+                .opacity(canSplitMerge ? 1 : 0.4)
+            }
+            .padding(.top, 2)
+        }
+        .sheet(isPresented: $showSplitSheet) {
+            splitSheet
+        }
+        .sheet(isPresented: $showMergeSheet) {
+            mergeSheet
+        }
+        .sheet(item: $ticketConfig) { config in
+            OrderTicketView(
+                config: config,
+                handleDismiss: {
+                    ticketConfig = nil
+                }
+            )
+            .preferredColorScheme(.dark)
+            .presentationDetents([.fraction(0.55), .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.black)
         }
     }
 
@@ -284,7 +427,7 @@ struct OrderbookView: View {
             levelCount = count
         } label: {
             Text("\(count)")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.dmMonoMedium(size: 12))
                 .foregroundColor(.white)
                 .padding(.vertical, 6)
                 .padding(.horizontal, 10)
@@ -297,21 +440,243 @@ struct OrderbookView: View {
         }
         .buttonStyle(.plain)
     }
-
-    private func fallbackLadder(steps: Int) -> DemoOrderbook {
-        let tick = 0.01
-        let baseSize: Double = 1_000
-        let bids: [DemoOrderbookLevel] = (0..<steps).map { index in
-            let price = max(0.0, topOfBookBid - Double(index) * tick)
-            let size = baseSize * (1.0 + Double(index) * 0.25)
-            return DemoOrderbookLevel(price: price, size: size)
+    
+    // MARK: - Split / Merge Sheets
+    
+    private var splitSheet: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Split Position")
+                    .font(.dmMonoMedium(size: 18))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Text("Move part of your existing position between the Yes and No markets for this outcome without placing new orders on the orderbook.")
+                    .font(.dmMonoRegular(size: 13))
+                    .foregroundColor(.white.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Direction")
+                        .font(.dmMonoRegular(size: 13))
+                        .foregroundColor(.white.opacity(0.75))
+                    Picker("", selection: $splitDirectionIsYesToNo) {
+                        Text("Yes → No").tag(true)
+                        Text("No → Yes").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Amount")
+                        .font(.dmMonoRegular(size: 13))
+                        .foregroundColor(.white.opacity(0.75))
+                    TextField("Quantity", text: $splitAmountText)
+                        .keyboardType(.numberPad)
+                        .font(.dmMonoMedium(size: 16))
+                        .foregroundColor(.white)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 10)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                
+                if let advancedErrorMessage {
+                    Text(advancedErrorMessage)
+                        .font(.dmMonoRegular(size: 12))
+                        .foregroundColor(.red)
+                } else if let advancedSuccessMessage {
+                    Text(advancedSuccessMessage)
+                        .font(.dmMonoRegular(size: 12))
+                        .foregroundColor(.green)
+                }
+                
+                Button {
+                    Task { await handleSplitConfirm() }
+                } label: {
+                    HStack {
+                        if isSubmittingAdvanced {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .tint(.black)
+                        }
+                        Text(isSubmittingAdvanced ? "Splitting..." : "Confirm Split")
+                            .font(.dmMonoMedium(size: 15))
+                    }
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .disabled(isSubmittingAdvanced)
+                .buttonStyle(.plain)
+                
+                Spacer()
+            }
+            .padding(16)
+            .background(Color.black.ignoresSafeArea())
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        showSplitSheet = false
+                    }
+                    .foregroundColor(.white)
+                }
+            }
+            .alert(isPresented: $showAdvancedAlert) {
+                Alert(
+                    title: Text("Order Update"),
+                    message: Text(advancedAlertMessage ?? ""),
+                    dismissButton: .default(Text("OK"))
+                )
+            }
         }
-        let asks: [DemoOrderbookLevel] = (0..<steps).map { index in
-            let price = min(1.0, topOfBookAsk + Double(index) * tick)
-            let size = baseSize * (1.0 + Double(index) * 0.25)
-            return DemoOrderbookLevel(price: price, size: size)
+    }
+    
+    private var mergeSheet: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Merge Positions")
+                    .font(.dmMonoMedium(size: 18))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Text("Combine your exposure between the Yes and No markets for this outcome into a cleaner net position using your existing holdings.")
+                    .font(.dmMonoRegular(size: 13))
+                    .foregroundColor(.white.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+                
+                if let advancedErrorMessage {
+                    Text(advancedErrorMessage)
+                        .font(.dmMonoRegular(size: 12))
+                        .foregroundColor(.red)
+                } else if let advancedSuccessMessage {
+                    Text(advancedSuccessMessage)
+                        .font(.dmMonoRegular(size: 12))
+                        .foregroundColor(.green)
+                }
+                
+                Button {
+                    Task { await handleMergeConfirm() }
+                } label: {
+                    HStack {
+                        if isSubmittingAdvanced {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .tint(.black)
+                        }
+                        Text(isSubmittingAdvanced ? "Merging..." : "Confirm Merge")
+                            .font(.dmMonoMedium(size: 15))
+                    }
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .disabled(isSubmittingAdvanced)
+                .buttonStyle(.plain)
+                
+                Spacer()
+            }
+            .padding(16)
+            .background(Color.black.ignoresSafeArea())
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        showMergeSheet = false
+                    }
+                    .foregroundColor(.white)
+                }
+            }
         }
-        return DemoOrderbook(bids: bids, asks: asks)
+    }
+    
+    private func handleSplitConfirm() async {
+        guard let yesId = outcome.yes.marketId, let noId = outcome.no.marketId else {
+            await MainActor.run {
+                advancedErrorMessage = "Markets unavailable for this outcome."
+                advancedAlertMessage = advancedErrorMessage
+                showAdvancedAlert = true
+            }
+            return
+        }
+        
+        let trimmed = splitAmountText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let amount = UInt64(trimmed), amount > 0 else {
+            await MainActor.run {
+                advancedErrorMessage = "Enter a valid positive amount."
+                advancedAlertMessage = advancedErrorMessage
+                showAdvancedAlert = true
+            }
+            return
+        }
+        
+        let fromId = splitDirectionIsYesToNo ? yesId : noId
+        let toId = splitDirectionIsYesToNo ? noId : yesId
+        let request = SplitOrderRequest(market1Id: fromId, market2Id: toId, amount: amount)
+        
+        await MainActor.run {
+            isSubmittingAdvanced = true
+            advancedErrorMessage = nil
+            advancedSuccessMessage = nil
+            advancedAlertMessage = nil
+        }
+        
+        do {
+            _ = try await OrderService.shared.splitOrder(request)
+            await MainActor.run {
+                isSubmittingAdvanced = false
+                advancedSuccessMessage = "Split submitted successfully."
+                advancedAlertMessage = advancedSuccessMessage
+                showAdvancedAlert = true
+            }
+        } catch {
+            await MainActor.run {
+                isSubmittingAdvanced = false
+                advancedErrorMessage = error.localizedDescription
+                advancedAlertMessage = advancedErrorMessage
+                showAdvancedAlert = true
+            }
+        }
+    }
+    
+    private func handleMergeConfirm() async {
+        guard let yesId = outcome.yes.marketId, let noId = outcome.no.marketId else {
+            await MainActor.run {
+                advancedErrorMessage = "Markets unavailable for this outcome."
+                advancedAlertMessage = advancedErrorMessage
+                showAdvancedAlert = true
+            }
+            return
+        }
+        
+        let request = MergeOrderRequest(market1Id: yesId, market2Id: noId)
+        
+        await MainActor.run {
+            isSubmittingAdvanced = true
+            advancedErrorMessage = nil
+            advancedSuccessMessage = nil
+            advancedAlertMessage = nil
+        }
+        
+        do {
+            _ = try await OrderService.shared.mergeOrder(request)
+            await MainActor.run {
+                isSubmittingAdvanced = false
+                advancedSuccessMessage = "Merge submitted successfully."
+                advancedAlertMessage = advancedSuccessMessage
+                showAdvancedAlert = true
+            }
+        } catch {
+            await MainActor.run {
+                isSubmittingAdvanced = false
+                advancedErrorMessage = error.localizedDescription
+                advancedAlertMessage = advancedErrorMessage
+                showAdvancedAlert = true
+            }
+        }
     }
 
     private func expand(book: DemoOrderbook, to levels: Int) -> DemoOrderbook {
@@ -379,4 +744,5 @@ struct OrderbookView: View {
         return String(Int(value))
     }
 }
+
 
