@@ -8,7 +8,8 @@
 import SwiftUI
 
 struct SignInView: View {
-    @Environment(\.dismiss) private var dismiss
+    let onAuthSuccess: () -> Void
+    let navigateToSignUp: () -> Void
 
     @State private var email = ""
     @State private var password = ""
@@ -33,10 +34,22 @@ struct SignInView: View {
                 )
                 if let errorMessage {
                     Text(errorMessage)
-                        .font(.footnote)
+                        .font(.dmMonoRegular(size: 13))
                         .foregroundColor(.red)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top, 4)
+                }
+                
+                Button(action: navigateToSignUp) {
+                    HStack(spacing: 6) {
+                        Text("Don't have an account?")
+                            .foregroundColor(.white.opacity(0.8))
+                        Text("Sign Up")
+                            .foregroundColor(.white)
+                    }
+                    .font(.dmMonoRegular(size: 15))
+                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
             .disabled(isLoading)
@@ -47,6 +60,7 @@ struct SignInView: View {
                     .tint(.white)
             }
         }
+        .navigationBarBackButtonHidden(false)
     }
 
     private func handleSignIn() {
@@ -62,17 +76,26 @@ struct SignInView: View {
         Task {
             do {
                 _ = try await AuthService.shared.signIn(email: email, password: password)
-                isLoading = false
-                dismiss()
+                await MainActor.run {
+                    isLoading = false
+                    onAuthSuccess()
+                }
             } catch {
-                isLoading = false
-                errorMessage = error.localizedDescription
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = error.localizedDescription
+                }
             }
         }
     }
 }
 
 #Preview {
-    SignInView()
+    NavigationStack {
+        SignInView(
+            onAuthSuccess: {},
+            navigateToSignUp: {}
+        )
         .preferredColorScheme(.dark)
+    }
 }

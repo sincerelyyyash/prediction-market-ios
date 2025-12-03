@@ -9,12 +9,7 @@ struct SignUpRequest: Encodable {
 struct SignUpResponse: Decodable {
     let status: String
     let message: String
-    let userId: UInt64
-
-    private enum CodingKeys: String, CodingKey {
-        case status
-        case message
-        case userId = "user_id"
-    }
+    let token: String
+    let user: AuthenticatedUser
 }
 

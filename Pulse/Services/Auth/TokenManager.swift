@@ -7,9 +7,13 @@ final class TokenManager: AccessTokenProviding {
     private let service = "com.yash.pulse.auth"
     private let account = "jwt-token"
 
-    private(set) var cachedToken: String?
+    private let lock = NSLock()
+    private var cachedToken: String?
 
     var accessToken: String? {
+        lock.lock()
+        defer { lock.unlock() }
+        
         if let cachedToken {
             return cachedToken
         }
@@ -18,11 +22,17 @@ final class TokenManager: AccessTokenProviding {
     }
 
     func store(token: String) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        
         try keychain.save(token, service: service, account: account)
         cachedToken = token
     }
 
     func clearToken() {
+        lock.lock()
+        defer { lock.unlock() }
+        
         try? keychain.delete(service: service, account: account)
         cachedToken = nil
     }

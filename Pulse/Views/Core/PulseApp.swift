@@ -11,7 +11,28 @@ import SwiftUI
 struct PulseApp: App {
     var body: some Scene {
         WindowGroup {
-            OnboardingView()
+            RootView()
+        }
+    }
+}
+
+private struct RootView: View {
+    @StateObject private var authService = AuthService.shared
+    
+    var body: some View {
+        Group {
+            if authService.isAuthenticated {
+                ContentView()
+                    .preferredColorScheme(.dark)
+            } else {
+                OnboardingView()
+                    .preferredColorScheme(.dark)
+            }
+        }
+        .task {
+            await MainActor.run {
+                authService.restoreSessionIfNeeded()
+            }
         }
     }
 }

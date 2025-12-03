@@ -1,7 +1,6 @@
 import Combine
 import Foundation
 
-@MainActor
 final class AuthService: ObservableObject {
     static let shared = AuthService()
 
@@ -23,13 +22,22 @@ final class AuthService: ObservableObject {
         tokenManager.isAuthenticated()
     }
 
-    func signUp(name: String, email: String, password: String) async throws -> SignUpResponse {
+    func signUp(name: String, email: String, password: String) async throws -> AuthSession {
         let request = SignUpRequest(name: name, email: email, password: password)
-        return try await client.send(
+        let response: SignUpResponse = try await client.send(
             path: APIPath.Public.signup,
             method: .post,
             body: request
         )
+
+        try tokenManager.store(token: response.token)
+        let newSession = AuthSession(token: response.token, user: response.user)
+        
+        await MainActor.run {
+            session = newSession
+        }
+
+        return newSession
     }
 
     func signIn(email: String, password: String) async throws -> AuthSession {
@@ -42,18 +50,35 @@ final class AuthService: ObservableObject {
 
         try tokenManager.store(token: response.token)
         let newSession = AuthSession(token: response.token, user: response.user)
+        
+        await MainActor.run {
         session = newSession
+        }
+
         return newSession
     }
 
+    @MainActor
     func restoreSessionIfNeeded() {
         guard session == nil, tokenManager.isAuthenticated() else { return }
         // User data is not persisted yet; session will be refreshed after next sign-in flow.
     }
 
+    @MainActor
     func signOut() {
         tokenManager.clearToken()
         session = nil
+    }
+}
+
+private extension String {
+    var maskedEmail: String {
+        guard let at = firstIndex(of: "@") else { return self }
+        let prefix = distance(from: startIndex, to: at)
+        if prefix <= 2 { return self }
+        let start = index(startIndex, offsetBy: 2)
+        let mask = String(repeating: "*", count: prefix - 2)
+        return replacingCharacters(in: start..<at, with: mask)
     }
 }
 

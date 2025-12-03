@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct SignUpView: View {
-    @Environment(\.dismiss) private var dismiss
+    let onAuthSuccess: () -> Void
+    let navigateToSignIn: () -> Void
 
     @State private var name = ""
     @State private var email = ""
@@ -37,10 +38,22 @@ struct SignUpView: View {
                 )
                 if let errorMessage {
                     Text(errorMessage)
-                        .font(.footnote)
+                        .font(.dmMonoRegular(size: 13))
                         .foregroundColor(.red)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top, 4)
+                }
+                
+                Button(action: navigateToSignIn) {
+                    HStack(spacing: 6) {
+                        Text("Already have an account?")
+                            .foregroundColor(.white.opacity(0.8))
+                        Text("Sign In")
+                            .foregroundColor(.white)
+                    }
+                    .font(.dmMonoRegular(size: 15))
+                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
             .disabled(isLoading)
@@ -51,6 +64,7 @@ struct SignUpView: View {
                     .tint(.white)
             }
         }
+        .navigationBarBackButtonHidden(false)
     }
 
     private func handleSignUp() {
@@ -78,18 +92,26 @@ struct SignUpView: View {
         Task {
             do {
                 _ = try await AuthService.shared.signUp(name: name, email: email, password: password)
-                _ = try await AuthService.shared.signIn(email: email, password: password)
-                isLoading = false
-                dismiss()
+                await MainActor.run {
+                    isLoading = false
+                    onAuthSuccess()
+                }
             } catch {
-                isLoading = false
-                errorMessage = error.localizedDescription
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = error.localizedDescription
+                }
             }
         }
     }
 }
 
 #Preview {
-    SignUpView()
+    NavigationStack {
+        SignUpView(
+            onAuthSuccess: {},
+            navigateToSignIn: {}
+        )
         .preferredColorScheme(.dark)
+    }
 }
