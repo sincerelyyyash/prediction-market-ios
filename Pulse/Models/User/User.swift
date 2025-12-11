@@ -26,6 +26,13 @@ struct UserProfile: Decodable, Identifiable, Equatable {
             )
         }
     }
+
+    init(id: UInt64, email: String, name: String, balance: Int64?) {
+        self.id = id
+        self.email = email
+        self.name = name
+        self.balance = balance
+    }
 }
 
 struct UserResponse: Decodable {

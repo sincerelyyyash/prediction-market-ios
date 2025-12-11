@@ -30,7 +30,7 @@ struct ProfileView: View {
             }
         }
         .task {
-            await refreshProfile()
+            await loadProfileFast()
         }
     }
 
@@ -246,22 +246,54 @@ struct ProfileView: View {
                 .progressViewStyle(.circular)
                 .tint(.white)
         } else if requiresAuth {
-            VStack(spacing: 12) {
-                Text("Sign in to view your profile")
-                    .font(.dmMonoMedium(size: 17))
-                    .foregroundColor(.white)
-                Text("Your session has expired or no account is currently signed in.")
-                    .font(.dmMonoRegular(size: 15))
-                    .foregroundColor(.white.opacity(0.7))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-                Button("Go to Sign In") {
-                    // Clear any existing token and let RootView switch to Onboarding
-                    handleLogout()
+            VStack(spacing: 20) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(width: 80, height: 80)
+                    Image(systemName: "person.crop.circle.badge.questionmark")
+                        .font(.system(size: 36))
+                        .foregroundColor(.white.opacity(0.7))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.white)
+                .padding(.bottom, 4)
+                
+                // Title
+                Text("Sign in to view your profile")
+                    .font(.dmMonoMedium(size: 20))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                
+                // Subtitle
+                Text("Access your account details, balance, and manage your trading preferences.")
+                    .font(.dmMonoRegular(size: 14))
+                    .foregroundColor(.white.opacity(0.6))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                
+                // Sign In Button
+                Button {
+                    handleLogout()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                        Text("Sign In")
+                            .font(.dmMonoMedium(size: 16))
+                    }
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 48)
+                .padding(.top, 8)
+                .accessibilityLabel("Sign In")
+                .accessibilityHint("Redirects to the sign in screen")
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let errorMessage {
             VStack(spacing: 12) {
                 Text("Unable to load profile")
@@ -273,7 +305,7 @@ struct ProfileView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
                 Button("Retry") {
-                    Task { await refreshProfile() }
+                    Task { await loadProfileFast() }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.white)
@@ -300,44 +332,42 @@ struct ProfileView: View {
         }
     }
 
-    private func refreshProfile() async {
+    private func loadProfileFast() async {
         await MainActor.run {
             isLoading = true
             errorMessage = nil
             requiresAuth = false
         }
 
-        do {
-            guard let userId = authService.session?.user.id else {
-                await MainActor.run {
-                    isLoading = false
-                    requiresAuth = true
-                }
-                return
+        
+        await authService.restoreSessionIfNeeded()
+        if let sessionUser = authService.session?.user {
+            await MainActor.run {
+                userProfile = UserProfile(id: sessionUser.id, email: sessionUser.email, name: sessionUser.name, balance: sessionUser.balance)
+                memberSince = "Member since \(Calendar.current.component(.year, from: Date()))"
             }
+        }
 
-            let profile = try await UserService.shared.getUser(by: Int64(userId))
-            
-            var fetchedBalance: Int64? = nil
-            do {
-                let balanceResponse = try await UserService.shared.getBalance()
-                fetchedBalance = balanceResponse.balance
-            } catch {
-                if let apiError = error as? APIError,
-                   case let .server(_, message) = apiError,
-                   let message,
-                   message.localizedCaseInsensitiveContains("failed to get balance"),
-                   message.localizedCaseInsensitiveContains("user not found") {
-                    fetchedBalance = 0
-                } else {
-                    throw error
-                }
+        guard let userId = authService.session?.user.id else {
+            await MainActor.run {
+                isLoading = false
+                requiresAuth = true
             }
-            
+            return
+        }
+
+
+        do {
+            async let profileTask = UserService.shared.getUser(by: Int64(userId))
+            async let balanceTask = UserService.shared.getBalance()
+
+            let profile = try await profileTask
+            let balanceResponse = try await balanceTask
+
             await MainActor.run {
                 userProfile = profile
                 memberSince = "Member since \(Calendar.current.component(.year, from: Date()))"
-                balance = Double(fetchedBalance ?? 0)
+                balance = Double(balanceResponse.balance ?? profile.balance ?? 0)
                 isLoading = false
             }
         } catch {

@@ -38,8 +38,8 @@ final class OrderService {
         return try envelope.requireData()
     }
 
-    func splitOrder(_ request: SplitOrderRequest) async throws -> Order {
-        let envelope: APIEnvelope<Order> = try await client.send(
+    func splitOrder(_ request: SplitOrderRequest) async throws -> SplitOrderResponse {
+        let envelope: APIEnvelope<SplitOrderResponse> = try await client.send(
             path: APIPath.Authenticated.splitOrder,
             method: .post,
             body: request,
@@ -48,8 +48,8 @@ final class OrderService {
         return try envelope.requireData()
     }
 
-    func mergeOrder(_ request: MergeOrderRequest) async throws -> Order {
-        let envelope: APIEnvelope<Order> = try await client.send(
+    func mergeOrder(_ request: MergeOrderRequest) async throws -> MergeOrderResponse {
+        let envelope: APIEnvelope<MergeOrderResponse> = try await client.send(
             path: APIPath.Authenticated.mergeOrder,
             method: .post,
             body: request,

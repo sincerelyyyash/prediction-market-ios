@@ -1,6 +1,6 @@
 import Foundation
 
-struct AuthenticatedUser: Decodable, Equatable {
+struct AuthenticatedUser: Codable, Equatable {
     let id: UInt64
     let email: String
     let name: String
@@ -25,6 +25,13 @@ struct AuthenticatedUser: Decodable, Equatable {
                 debugDescription: "ID must be a non-negative Int64 or a UInt64"
             )
         }
+    }
+
+    init(id: UInt64, email: String, name: String, balance: Int64?) {
+        self.id = id
+        self.email = email
+        self.name = name
+        self.balance = balance
     }
 }
 

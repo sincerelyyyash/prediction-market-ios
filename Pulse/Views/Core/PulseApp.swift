@@ -30,9 +30,7 @@ private struct RootView: View {
             }
         }
         .task {
-            await MainActor.run {
-                authService.restoreSessionIfNeeded()
-            }
+            await authService.restoreSessionIfNeeded()
         }
     }
 }

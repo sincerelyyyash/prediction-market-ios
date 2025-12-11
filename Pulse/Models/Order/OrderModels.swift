@@ -43,7 +43,29 @@ struct SplitOrderRequest: Encodable {
     }
 }
 
+struct SplitOrderResponse: Decodable {
+    let market1Id: UInt64
+    let market2Id: UInt64
+    let amount: UInt64
+
+    private enum CodingKeys: String, CodingKey {
+        case market1Id = "market1_id"
+        case market2Id = "market2_id"
+        case amount
+    }
+}
+
 struct MergeOrderRequest: Encodable {
+    let market1Id: UInt64
+    let market2Id: UInt64
+
+    private enum CodingKeys: String, CodingKey {
+        case market1Id = "market1_id"
+        case market2Id = "market2_id"
+    }
+}
+
+struct MergeOrderResponse: Decodable {
     let market1Id: UInt64
     let market2Id: UInt64
 

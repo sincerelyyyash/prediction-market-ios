@@ -19,7 +19,6 @@ struct OrderbookView: View {
     @State private var isSubmittingAdvanced = false
     @State private var advancedErrorMessage: String?
     @State private var advancedSuccessMessage: String?
-    @State private var splitDirectionIsYesToNo = true
     @State private var showAdvancedAlert = false
     @State private var advancedAlertMessage: String?
 
@@ -350,7 +349,6 @@ struct OrderbookView: View {
                     advancedErrorMessage = nil
                     advancedSuccessMessage = nil
                     splitAmountText = ""
-                    splitDirectionIsYesToNo = true
                     showSplitSheet = true
                 } label: {
                     HStack(spacing: 6) {
@@ -451,21 +449,10 @@ struct OrderbookView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 
-                Text("Move part of your existing position between the Yes and No markets for this outcome without placing new orders on the orderbook.")
+                Text("Allocate an amount into both the Yes and No markets for this outcome without placing new orders on the orderbook.")
                     .font(.dmMonoRegular(size: 13))
                     .foregroundColor(.white.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Direction")
-                        .font(.dmMonoRegular(size: 13))
-                        .foregroundColor(.white.opacity(0.75))
-                    Picker("", selection: $splitDirectionIsYesToNo) {
-                        Text("Yes → No").tag(true)
-                        Text("No → Yes").tag(false)
-                    }
-                    .pickerStyle(.segmented)
-                }
                 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Amount")
@@ -613,9 +600,7 @@ struct OrderbookView: View {
             return
         }
         
-        let fromId = splitDirectionIsYesToNo ? yesId : noId
-        let toId = splitDirectionIsYesToNo ? noId : yesId
-        let request = SplitOrderRequest(market1Id: fromId, market2Id: toId, amount: amount)
+        let request = SplitOrderRequest(market1Id: yesId, market2Id: noId, amount: amount)
         
         await MainActor.run {
             isSubmittingAdvanced = true

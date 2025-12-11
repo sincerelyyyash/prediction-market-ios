@@ -52,12 +52,12 @@ struct HomeView: View {
 
     @ViewBuilder
     private func contentBody(geo: GeometryProxy) -> some View {
-        if isLoading {
+        if isLoading && events.isEmpty {
             ProgressView("Loading events...")
                 .progressViewStyle(.circular)
                 .tint(.white)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if let errorMessage {
+        } else if let errorMessage, events.isEmpty {
             VStack(spacing: 12) {
                 Text("Unable to load events")
                     .font(.dmMonoMedium(size: 17))
@@ -149,27 +149,39 @@ struct HomeView: View {
 
     private func loadEvents() async {
         guard !isLoading else { return }
+
         await MainActor.run {
             isLoading = true
             errorMessage = nil
         }
-        do {
-            // Load all three feeds concurrently
-            async let generalEventsTask = EventService.shared.getEvents()
-            async let bookmarksTask = loadBookmarksOrEmpty()
-            async let forYouTask = loadForYouOrEmpty()
 
-            let (remoteEvents, bookmarks, forYou) = try await (generalEventsTask, bookmarksTask, forYouTask)
+        // 1) Fetch events first (drives main content)
+        do {
+            let remoteEvents = try await EventService.shared.getEvents()
             await MainActor.run {
-                events = remoteEvents.compactMap { map(dto: $0) }
-                bookmarkedEvents = bookmarks.compactMap { map(dto: $0) }
-                forYouEvents = forYou.compactMap { map(dto: $0) }
+                events = dedupeById(remoteEvents).compactMap { map(dto: $0) }
                 isLoading = false
             }
         } catch {
             await MainActor.run {
                 isLoading = false
                 errorMessage = error.localizedDescription
+            }
+            return
+        }
+
+        // 2) Fetch bookmarks and for-you in background; update sections when they land
+        Task {
+            let bookmarks = await loadBookmarksOrEmpty()
+            await MainActor.run {
+                bookmarkedEvents = dedupeById(bookmarks).compactMap { map(dto: $0) }
+            }
+        }
+
+        Task {
+            let forYou = await loadForYouOrEmpty()
+            await MainActor.run {
+                forYouEvents = dedupeById(forYou).compactMap { map(dto: $0) }
             }
         }
     }
@@ -214,6 +226,17 @@ struct HomeView: View {
             description: dto.description,
             imgUrl: dto.imgUrl
         )
+    }
+
+    private func dedupeById(_ dtos: [EventDTO]) -> [EventDTO] {
+        var seen = Set<UInt64>()
+        var result: [EventDTO] = []
+        for dto in dtos {
+            if seen.insert(dto.id).inserted {
+                result.append(dto)
+            }
+        }
+        return result
     }
 
     private func probability(from dto: EventDTO, side: String) -> Double {

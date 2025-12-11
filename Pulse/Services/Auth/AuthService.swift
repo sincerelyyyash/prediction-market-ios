@@ -6,6 +6,7 @@ final class AuthService: ObservableObject {
 
     @Published private(set) var session: AuthSession?
 
+    private let sessionStorageKey = "pulse.auth.session"
     private let client: NetworkClient
     private let tokenManager: TokenManager
 
@@ -53,21 +54,47 @@ final class AuthService: ObservableObject {
         
         await MainActor.run {
         session = newSession
+            persistSession(newSession)
         }
 
         return newSession
     }
 
     @MainActor
-    func restoreSessionIfNeeded() {
+    func restoreSessionIfNeeded() async {
         guard session == nil, tokenManager.isAuthenticated() else { return }
-        // User data is not persisted yet; session will be refreshed after next sign-in flow.
+
+        // 1) Try stored session first
+        if let stored = loadStoredSession() {
+            session = stored
+            return
+        }
+
+        // 2) Try to reconstruct session from token by decoding user id and fetching profile
+        guard let token = tokenManager.accessToken,
+              let userId = decodeUserId(from: token) else { return }
+
+        do {
+            let profile = try await UserService.shared.getUser(by: Int64(userId))
+            let authUser = AuthenticatedUser(
+                id: userId,
+                email: profile.email,
+                name: profile.name,
+                balance: profile.balance
+            )
+            let rebuilt = AuthSession(token: token, user: authUser)
+            session = rebuilt
+            persistSession(rebuilt)
+        } catch {
+            // If fetching user fails, keep session nil; token-based calls will still work.
+        }
     }
 
     @MainActor
     func signOut() {
         tokenManager.clearToken()
         session = nil
+        clearStoredSession()
     }
 }
 
@@ -79,6 +106,56 @@ private extension String {
         let start = index(startIndex, offsetBy: 2)
         let mask = String(repeating: "*", count: prefix - 2)
         return replacingCharacters(in: start..<at, with: mask)
+    }
+}
+
+// MARK: - Persistence
+private extension AuthService {
+    struct StoredSession: Codable {
+        let token: String
+        let user: AuthenticatedUser
+    }
+
+    func persistSession(_ session: AuthSession) {
+        let stored = StoredSession(token: session.token, user: session.user)
+        if let data = try? JSONEncoder().encode(stored) {
+            UserDefaults.standard.set(data, forKey: sessionStorageKey)
+        }
+    }
+
+    func loadStoredSession() -> AuthSession? {
+        guard let data = UserDefaults.standard.data(forKey: sessionStorageKey),
+              let stored = try? JSONDecoder().decode(StoredSession.self, from: data) else {
+            return nil
+        }
+        return AuthSession(token: stored.token, user: stored.user)
+    }
+
+    func clearStoredSession() {
+        UserDefaults.standard.removeObject(forKey: sessionStorageKey)
+    }
+
+    func decodeUserId(from token: String) -> UInt64? {
+        let parts = token.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+        let payloadPart = parts[1]
+        // Pad base64 if needed
+        let paddedLength = ((payloadPart.count + 3) / 4) * 4
+        let padded = payloadPart.padding(toLength: paddedLength, withPad: "=", startingAt: 0)
+        guard let data = Data(base64Encoded: padded),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        if let sub = json["sub"] as? Int {
+            return sub >= 0 ? UInt64(sub) : nil
+        }
+        if let sub = json["sub"] as? Int64 {
+            return sub >= 0 ? UInt64(sub) : nil
+        }
+        if let sub = json["sub"] as? UInt64 {
+            return sub
+        }
+        return nil
     }
 }
 
