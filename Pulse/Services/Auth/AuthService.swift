@@ -64,13 +64,11 @@ final class AuthService: ObservableObject {
     func restoreSessionIfNeeded() async {
         guard session == nil, tokenManager.isAuthenticated() else { return }
 
-        // 1) Try stored session first
         if let stored = loadStoredSession() {
             session = stored
             return
         }
 
-        // 2) Try to reconstruct session from token by decoding user id and fetching profile
         guard let token = tokenManager.accessToken,
               let userId = decodeUserId(from: token) else { return }
 
@@ -86,7 +84,6 @@ final class AuthService: ObservableObject {
             session = rebuilt
             persistSession(rebuilt)
         } catch {
-            // If fetching user fails, keep session nil; token-based calls will still work.
         }
     }
 
@@ -109,7 +106,6 @@ private extension String {
     }
 }
 
-// MARK: - Persistence
 private extension AuthService {
     struct StoredSession: Codable {
         let token: String
@@ -139,7 +135,6 @@ private extension AuthService {
         let parts = token.split(separator: ".")
         guard parts.count >= 2 else { return nil }
         let payloadPart = parts[1]
-        // Pad base64 if needed
         let paddedLength = ((payloadPart.count + 3) / 4) * 4
         let padded = payloadPart.padding(toLength: paddedLength, withPad: "=", startingAt: 0)
         guard let data = Data(base64Encoded: padded),

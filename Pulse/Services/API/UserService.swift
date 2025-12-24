@@ -28,7 +28,6 @@ final class UserService {
     }
 
     func getUser(by id: Int64) async throws -> UserProfile {
-        // Backend now returns user profile directly (not wrapped in a user field)
         let profile: UserProfile = try await client.send(
             path: APIPath.Authenticated.userById(id),
             method: .get,

@@ -41,7 +41,6 @@ final class EventService {
             requiresAuth: true
         )
 
-        // Map bookmark payload (market-centric) into flat EventDTOs
         return response.bookmarks.map { bookmark in
             let event = bookmark.market.event
             return EventDTO(
@@ -67,7 +66,6 @@ final class EventService {
             requiresAuth: true
         )
 
-        // Map recommended markets payload into flat EventDTOs
         return response.markets.map { marketWrapper in
             let event = marketWrapper.market.event
             return EventDTO(
@@ -103,9 +101,6 @@ final class EventService {
     }
 }
 
-// MARK: - Helper Response Types
-
-/// Bookmarks endpoint payload: `/user/bookmarks`
 private struct BookmarkEventsResponse: Decodable {
     struct BookmarkEvent: Decodable {
         let id: UInt64
@@ -160,7 +155,6 @@ private struct BookmarkEventsResponse: Decodable {
     }
 }
 
-/// For You markets endpoint payload: `/user/markets/for-you`
 private struct ForYouMarketsResponse: Decodable {
     struct ForYouEvent: Decodable {
         let id: UInt64

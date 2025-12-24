@@ -66,8 +66,6 @@ struct OnboardingView: View {
 
     private func handleStartTrading() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        // Instead of navigating to Sign In, go straight to the app
-//        showApp = true
         withAnimation(.slideTransition) {
             path.append(.signIn)
         }

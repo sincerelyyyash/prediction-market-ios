@@ -37,7 +37,6 @@ struct LoadingView: View {
     var body: some View {
         VStack(spacing: 16) {
             ZStack {
-                // Outer pulsing ring
                 Circle()
                     .stroke(
                         LinearGradient(
@@ -55,7 +54,6 @@ struct LoadingView: View {
                     .scaleEffect(scale)
                     .opacity(0.6)
                 
-                // Rotating spinner
                 Circle()
                     .trim(from: 0, to: 0.7)
                     .stroke(
@@ -101,7 +99,6 @@ struct LoadingView: View {
     }
 }
 
-// MARK: - Full Screen Loading View
 struct FullScreenLoadingView: View {
     let message: String?
     
@@ -117,7 +114,6 @@ struct FullScreenLoadingView: View {
     }
 }
 
-// MARK: - Inline Loading View (for buttons, cards, etc.)
 struct InlineLoadingView: View {
     let message: String?
     let color: Color
@@ -134,7 +130,6 @@ struct InlineLoadingView: View {
             if message != nil {
                 LoadingView(message: message, size: .small)
             } else {
-                // Simple spinner for buttons
                 Circle()
                     .trim(from: 0, to: 0.7)
                     .stroke(

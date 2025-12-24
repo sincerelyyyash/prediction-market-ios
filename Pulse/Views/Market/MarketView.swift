@@ -91,7 +91,6 @@ struct MarketView: View {
         }
     }
 
-    // Filters now operate on the fetched events
     private var filteredMarkets: [EventDetail] {
         events.filter { detail in
             let matchesCategory = selectedCategory == nil || detail.category == selectedCategory
@@ -171,8 +170,6 @@ private extension MarketCardContent {
     }
 }
 
-// MARK: - MarketEventDetailView Helper
-
 private struct MarketEventDetailView: View {
     let eventId: UUID
     let cachedDetail: EventDetail?
@@ -228,7 +225,6 @@ private struct MarketEventDetailView: View {
             return
         }
         
-        // Check cache first
         if let cached = eventDetailsCache[eventId] {
             await MainActor.run {
                 eventDetail = cached

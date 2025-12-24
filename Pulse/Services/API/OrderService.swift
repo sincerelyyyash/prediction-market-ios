@@ -104,9 +104,6 @@ final class OrderService {
     }
 }
 
-// MARK: - Helper Response Types
-
-/// Order history endpoint payload: `/orders/history`
 private struct OrderListResponse: Decodable {
     let status: String?
     let message: String?

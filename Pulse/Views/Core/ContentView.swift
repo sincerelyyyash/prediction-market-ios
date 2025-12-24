@@ -43,7 +43,6 @@ struct ContentView: View {
     }
 
     private func performInitialDataCheck() async {
-        // If there's no token at all, sign out so RootView sends user to onboarding.
         if !TokenManager.shared.isAuthenticated() {
             await MainActor.run {
                 authService.signOut()

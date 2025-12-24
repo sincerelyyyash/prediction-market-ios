@@ -1,6 +1,5 @@
 import SwiftUI
 
-// MARK: - Consistent Animation Constants
 extension Animation {
     static var slideTransition: Animation {
         .easeInOut(duration: 0.3)
@@ -11,7 +10,6 @@ extension Animation {
     }
 }
 
-// MARK: - View Transitions
 extension AnyTransition {
     static var slideFromTrailing: AnyTransition {
         .asymmetric(

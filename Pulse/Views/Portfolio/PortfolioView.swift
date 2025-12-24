@@ -1,6 +1,5 @@
 import SwiftUI
 
-// Dedicated loader for navigating from Portfolio to an event detail.
 fileprivate struct PortfolioEventDetailView: View {
     let eventId: UUID
     let cachedDetail: EventDetail?
@@ -257,7 +256,6 @@ struct PortfolioView: View {
             FullScreenLoadingView(message: "Loading portfolio...")
         } else if requiresAuth {
             VStack(spacing: 20) {
-                // Icon
                 ZStack {
                     Circle()
                         .fill(AppColors.cardBackground(opacity: 0.08))
@@ -268,20 +266,17 @@ struct PortfolioView: View {
                 }
                 .padding(.bottom, 4)
                 
-                // Title
                 Text("Sign in to view your positions")
                     .font(.dmMonoMedium(size: 20))
                     .foregroundColor(AppColors.primaryText)
                     .multilineTextAlignment(.center)
                 
-                // Subtitle
                 Text("Track your PnL, open positions, and order history all in one place.")
                     .font(.dmMonoRegular(size: 14))
                     .foregroundColor(AppColors.secondaryText(opacity: 0.6))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
                 
-                // Sign In Button
                 Button {
                     authService.signOut()
                 } label: {
@@ -384,8 +379,6 @@ struct PortfolioView: View {
     }
 
     private func loadPortfolioData() async {
-        // If there's no JWT token at all, immediately sign out so the app
-        // transitions back to onboarding instead of showing an auth error.
         if !TokenManager.shared.isAuthenticated() {
             await MainActor.run {
                 AuthService.shared.signOut()
@@ -399,7 +392,6 @@ struct PortfolioView: View {
             requiresAuth = false
         }
 
-        // Check auth state first
         await authService.restoreSessionIfNeeded()
         guard authService.session?.user.id != nil else {
             await MainActor.run {
@@ -409,7 +401,6 @@ struct PortfolioView: View {
             return
         }
 
-        // Fast path: portfolio only
         do {
             let portfolio = try await PositionService.shared.getPortfolio()
             await MainActor.run {
@@ -430,21 +421,18 @@ struct PortfolioView: View {
             return
         }
 
-        // Background: open orders
         Task {
             if let pending = try? await OrderService.shared.getOpenOrders() {
                 await MainActor.run { self.openOrders = pending }
             }
         }
 
-        // Background: history
         Task {
             if let history = try? await OrderService.shared.getOrderHistory() {
                 await MainActor.run { self.orderHistory = history }
             }
         }
 
-        // Background: events for naming/tap-through
         Task {
             if let events = try? await EventService.shared.getEvents() {
                 var updatedEventIdMap = eventIdMap
@@ -527,8 +515,6 @@ struct PortfolioView: View {
         return (lookup, eventIdMap)
     }
 }
-
-// MARK: - Rows
 
 private struct PortfolioPositionRow: View {
     let position: PortfolioPosition

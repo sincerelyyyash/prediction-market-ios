@@ -1,10 +1,3 @@
-//
-//  SignInView.swift
-//  Pulse
-//
-//  Created by Yash Thakur on 26/11/25.
-//
-
 import SwiftUI
 
 struct SignInView: View {
@@ -39,7 +32,7 @@ struct SignInView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top, 4)
                 }
-                
+            } footer: {
                 Button(action: navigateToSignUp) {
                     HStack(spacing: 6) {
                         Text("Don't have an account?")
@@ -83,7 +76,12 @@ struct SignInView: View {
             } catch {
                 await MainActor.run {
                     isLoading = false
+                    if let apiError = error as? APIError, apiError.isNetworkError {
+                        ErrorHandler.shared.handleError(error)
+                        errorMessage = nil
+                    } else {
                     errorMessage = error.localizedDescription
+                    }
                 }
             }
         }

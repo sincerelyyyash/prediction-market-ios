@@ -255,7 +255,6 @@ struct ProfileView: View {
             FullScreenLoadingView(message: "Loading profile...")
         } else if requiresAuth {
             VStack(spacing: 20) {
-                // Icon
                 ZStack {
                     Circle()
                         .fill(AppColors.cardBackground(opacity: 0.08))
@@ -266,20 +265,17 @@ struct ProfileView: View {
                 }
                 .padding(.bottom, 4)
                 
-                // Title
                 Text("Sign in to view your profile")
                     .font(.dmMonoMedium(size: 20))
                     .foregroundColor(AppColors.primaryText)
                     .multilineTextAlignment(.center)
                 
-                // Subtitle
                 Text("Access your account details, balance, and manage your trading preferences.")
                     .font(.dmMonoRegular(size: 14))
                     .foregroundColor(AppColors.secondaryText(opacity: 0.6))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
                 
-                // Sign In Button
                 Button {
                     handleLogout()
                 } label: {
@@ -335,8 +331,6 @@ struct ProfileView: View {
     }
 
     private func loadProfileFast() async {
-        // If there's no JWT token at all, immediately sign out so the app
-        // transitions back to onboarding instead of showing an auth error.
         if !TokenManager.shared.isAuthenticated() {
             await MainActor.run {
                 AuthService.shared.signOut()
@@ -417,8 +411,6 @@ struct ProfileView: View {
 #Preview {
     ProfileView()
 }
-
-// MARK: - Inline Screens
 
 private struct AddFundsScreen: View {
     @Binding var balance: Double
@@ -521,9 +513,10 @@ private struct AddFundsScreen: View {
         Task {
             do {
                 try await handleSubmit(Int64(amount))
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                    balance += amount
-                    amountText = ""
+                await MainActor.run {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                        amountText = ""
+                    }
                 }
                 isSubmitting = false
             } catch {

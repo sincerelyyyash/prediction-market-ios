@@ -13,7 +13,6 @@ struct HomeView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
 
-    /// Bookmarks section: show bookmarked events, fallback to first 10 general events if empty
     private var bookmarksToShow: [Event] {
         let baseEvents = bookmarkedEvents.isEmpty 
             ? events.filter { !$0.isResolved }.prefix(10).map { $0 }
@@ -21,7 +20,6 @@ struct HomeView: View {
         return filterEvents(baseEvents)
     }
 
-    /// For You section: show for-you events, fallback to first 5 general events if empty
     private var forYouToShow: [Event] {
         let baseEvents = forYouEvents.isEmpty 
             ? events.filter { !$0.isResolved }.prefix(5).map { $0 }
@@ -29,7 +27,6 @@ struct HomeView: View {
         return filterEvents(baseEvents)
     }
     
-    /// Filter events based on search text and category
     private func filterEvents(_ events: [Event]) -> [Event] {
         events.filter { event in
             let matchesCategory = selectedCategory == nil || event.category == selectedCategory
@@ -175,7 +172,6 @@ struct HomeView: View {
             errorMessage = nil
         }
 
-        // 1) Fetch events first (drives main content)
         do {
             let remoteEvents = try await EventService.shared.getEvents()
             await MainActor.run {
@@ -190,7 +186,6 @@ struct HomeView: View {
             return
         }
 
-        // 2) Fetch bookmarks and for-you in background; update sections when they land
         Task {
             let bookmarks = await loadBookmarksOrEmpty()
             await MainActor.run {
@@ -206,7 +201,6 @@ struct HomeView: View {
         }
     }
 
-    /// Load bookmarks, returning empty array on failure (non-blocking)
     private func loadBookmarksOrEmpty() async -> [EventDTO] {
         do {
             return try await EventService.shared.getBookmarkedEvents()
@@ -215,7 +209,6 @@ struct HomeView: View {
         }
     }
 
-    /// Load for-you events, returning empty array on failure (non-blocking)
     private func loadForYouOrEmpty() async -> [EventDTO] {
         do {
             return try await EventService.shared.getForYouEvents()
@@ -310,8 +303,6 @@ private extension MarketCardContent {
     }
 }
 
-// MARK: - EventDetailView Helper
-
 private struct EventDetailView: View {
     let eventId: UUID
     let cachedDetail: EventDetail?
@@ -367,7 +358,6 @@ private struct EventDetailView: View {
             return
         }
         
-        // Check cache first
         if let cached = eventDetailsCache[eventId] {
             await MainActor.run {
                 eventDetail = cached

@@ -9,7 +9,6 @@ struct EventHeroImageView: View {
     var body: some View {
         Group {
             if let imgUrl, let url = URL(string: imgUrl) {
-                // Load image from network URL
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .empty:
@@ -43,7 +42,6 @@ struct EventHeroImageView: View {
                 .resizable()
                 .scaledToFill()
         } else {
-            // Fallback visual if even placeholder is missing
             ZStack {
                 LinearGradient(
                     colors: [AppColors.cardBackground(opacity: 0.08), AppColors.cardBackground(opacity: 0.02)],

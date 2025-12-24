@@ -43,7 +43,7 @@ struct SignUpView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top, 4)
                 }
-                
+            } footer: {
                 Button(action: navigateToSignIn) {
                     HStack(spacing: 6) {
                         Text("Already have an account?")
@@ -99,7 +99,12 @@ struct SignUpView: View {
             } catch {
                 await MainActor.run {
                     isLoading = false
+                    if let apiError = error as? APIError, apiError.isNetworkError {
+                        ErrorHandler.shared.handleError(error)
+                        errorMessage = nil
+                    } else {
                     errorMessage = error.localizedDescription
+                    }
                 }
             }
         }
