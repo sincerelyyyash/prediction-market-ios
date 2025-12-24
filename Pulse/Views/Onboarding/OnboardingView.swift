@@ -11,10 +11,11 @@ struct OnboardingView: View {
     @State private var showApp = false
 
     var body: some View {
-        Group {
+        ZStack {
             if showApp {
                 ContentView()
                     .preferredColorScheme(.dark)
+                    .transition(.fadeTransition)
             } else {
                 NavigationStack(path: $path) {
                     GeometryReader { geo in
@@ -40,54 +41,72 @@ struct OnboardingView: View {
                         }
                     }
                     .navigationDestination(for: AuthRoute.self) { route in
-                        switch route {
-                        case .signIn:
-                            SignInView(
-                                onAuthSuccess: handleAuthSuccess,
-                                navigateToSignUp: { handleNavigateToSignUp() }
-                            )
-                            .preferredColorScheme(.dark)
-                        case .signUp:
-                            SignUpView(
-                                onAuthSuccess: handleAuthSuccess,
-                                navigateToSignIn: { handleNavigateToSignIn() }
-                            )
-                            .preferredColorScheme(.dark)
+                        Group {
+                            switch route {
+                            case .signIn:
+                                SignInView(
+                                    onAuthSuccess: handleAuthSuccess,
+                                    navigateToSignUp: { handleNavigateToSignUp() }
+                                )
+                                .preferredColorScheme(.dark)
+                                .transition(.slideFromTrailing)
+                            case .signUp:
+                                SignUpView(
+                                    onAuthSuccess: handleAuthSuccess,
+                                    navigateToSignIn: { handleNavigateToSignIn() }
+                                )
+                                .preferredColorScheme(.dark)
+                                .transition(.slideFromTrailing)
+                            }
                         }
                     }
                 }
+                .transition(.fadeTransition)
             }
         }
+        .animation(.slideTransition, value: showApp)
     }
 
     private func handleStartTrading() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         // Instead of navigating to Sign In, go straight to the app
 //        showApp = true
-        path.append(.signIn)
+        withAnimation(.slideTransition) {
+            path.append(.signIn)
+        }
     }
 
     private func handleSignIn() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        path.append(.signIn)
+        withAnimation(.slideTransition) {
+            path.append(.signIn)
+        }
     }
 
     private func handleSignUp() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        path.append(.signUp)
+        withAnimation(.slideTransition) {
+            path.append(.signUp)
+        }
     }
 
     private func handleNavigateToSignUp() {
-        path = [.signUp]
+        withAnimation(.slideTransition) {
+            path = [.signUp]
+        }
     }
 
     private func handleNavigateToSignIn() {
-        path = [.signIn]
+        withAnimation(.slideTransition) {
+            path = [.signIn]
+        }
     }
 
     private func handleAuthSuccess() {
-        path.removeAll()
-        showApp = true
+        withAnimation(.fadeTransition) {
+            path.removeAll()
+            showApp = true
+        }
     }
 }
 

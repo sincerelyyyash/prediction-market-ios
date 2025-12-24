@@ -20,15 +20,18 @@ private struct RootView: View {
     @StateObject private var authService = AuthService.shared
     
     var body: some View {
-        Group {
+        ZStack {
             if authService.isAuthenticated {
                 ContentView()
                     .preferredColorScheme(.dark)
+                    .transition(.fadeTransition)
             } else {
                 OnboardingView()
                     .preferredColorScheme(.dark)
+                    .transition(.fadeTransition)
             }
         }
+        .animation(.fadeTransition, value: authService.isAuthenticated)
         .task {
             await authService.restoreSessionIfNeeded()
         }

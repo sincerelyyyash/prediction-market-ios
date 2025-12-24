@@ -6,7 +6,9 @@ struct EventTopBarView: View {
     var body: some View {
         HStack(spacing: 12) {
             Button {
-                handleDismiss()
+                withAnimation(.slideTransition) {
+                    handleDismiss()
+                }
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.dmMonoMedium(size: 17))
