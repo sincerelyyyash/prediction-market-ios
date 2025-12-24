@@ -7,12 +7,6 @@ struct AuthTextField: View {
 
     var body: some View {
         ZStack(alignment: .leading) {
-            if text.isEmpty {
-                Text(placeholder)
-                    .foregroundColor(AppColors.secondaryText(opacity: 0.6))
-                    .font(.custom("DMMono-Regular", size: 18))
-                    .padding(.horizontal, 16)
-            }
             TextField("", text: $text)
                 .textInputAutocapitalization(.none)
                 .keyboardType(keyboardType)
@@ -21,6 +15,21 @@ struct AuthTextField: View {
                 .cornerRadius(12)
                 .foregroundColor(AppColors.primaryText)
                 .font(.custom("DMMono-Regular", size: 18))
+                .overlay(alignment: .leading) {
+                    if text.isEmpty {
+                        Text(placeholder)
+                            .foregroundColor(Color(UIColor { traitCollection in
+                                if traitCollection.userInterfaceStyle == .dark {
+                                    return UIColor.white.withAlphaComponent(0.6)
+                                } else {
+                                    return UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
+                                }
+                            }))
+                            .font(.custom("DMMono-Regular", size: 18))
+                            .padding(.horizontal, 16)
+                            .allowsHitTesting(false)
+                    }
+                }
         }
     }
 }

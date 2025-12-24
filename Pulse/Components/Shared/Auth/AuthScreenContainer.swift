@@ -1,10 +1,11 @@
 import SwiftUI
 
-struct AuthScreenContainer<Fields: View>: View {
+struct AuthScreenContainer<Fields: View, Footer: View>: View {
     let title: String
     let actionTitle: String
     let handleAction: () -> Void
     @ViewBuilder let fields: Fields
+    @ViewBuilder let footer: Footer
 
     var body: some View {
         GeometryReader { geo in
@@ -31,6 +32,7 @@ struct AuthScreenContainer<Fields: View>: View {
                                 .cornerRadius(14)
                         }
                         .padding(.top, 10)
+                        footer
                     }
                     .padding(.horizontal, 30)
                     .padding(.bottom, 24)
