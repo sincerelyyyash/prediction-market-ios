@@ -6,12 +6,12 @@ struct BackgroundGradientView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Color.black.ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
             RadialGradient(
                 gradient: Gradient(stops: [
-                    .init(color: .white, location: 0.0),
-                    .init(color: Color(red: 0.7, green: 0.7, blue: 0.75), location: 0.0),
-                    .init(color: .black, location: 0.4)
+                    .init(color: AppColors.gradientStart, location: 0.0),
+                    .init(color: AppColors.gradientMiddle, location: 0.15),
+                    .init(color: AppColors.gradientEnd, location: 0.4)
                 ]),
                 center: .top,
                 startRadius: 0,
