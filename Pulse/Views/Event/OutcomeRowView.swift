@@ -15,7 +15,8 @@ struct OutcomeRowView: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
+            OutcomeIconView(imgUrl: outcome.imgUrl, size: 40)
             Text(outcome.name)
                 .font(.dmMonoMedium(size: 15))
                 .foregroundColor(.white)
