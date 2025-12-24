@@ -2,6 +2,8 @@ import SwiftUI
 import UIKit
 
 struct ContentView: View {
+    @StateObject private var authService = AuthService.shared
+
     init() {
         let tabBarAppearance = UITabBarAppearance()
         tabBarAppearance.configureWithOpaqueBackground()
@@ -32,7 +34,33 @@ struct ContentView: View {
                     Label(Constants.profileString, systemImage: Constants.profileIconString)
                 }
         }
+        .task {
+            await performInitialDataCheck()
+        }
         .tint(.white)
+    }
+
+    private func performInitialDataCheck() async {
+        // If there's no token at all, sign out so RootView sends user to onboarding.
+        if !TokenManager.shared.isAuthenticated() {
+            await MainActor.run {
+                authService.signOut()
+            }
+            return
+        }
+
+        do {
+            async let balanceTask = UserService.shared.getBalance()
+            async let portfolioTask = PositionService.shared.getPortfolio()
+            _ = try await (balanceTask, portfolioTask)
+        } catch {
+            let message = error.localizedDescription.lowercased()
+            if message.contains("jwt secret") || message.contains("jwt") {
+                await MainActor.run {
+                    authService.signOut()
+                }
+            }
+        }
     }
 }
 
