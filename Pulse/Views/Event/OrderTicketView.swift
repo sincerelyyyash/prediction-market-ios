@@ -107,9 +107,7 @@ struct OrderTicketView: View {
                 } label: {
                     HStack {
                         if isSubmitting {
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                                .tint(.black)
+                            InlineLoadingView(color: .black)
                         }
                         Text(isSubmitting ? "Placing Order..." : "Place Order")
                             .font(.dmMonoMedium(size: 15))

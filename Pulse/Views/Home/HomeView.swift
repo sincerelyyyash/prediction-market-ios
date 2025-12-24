@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct HomeView: View {
-
+    @State private var searchText = ""
+    @State private var selectedCategory: EventCategory?
     @State private var path: [UUID] = []
     @State private var events: [Event] = []
     @State private var bookmarkedEvents: [Event] = []
@@ -14,18 +15,30 @@ struct HomeView: View {
 
     /// Bookmarks section: show bookmarked events, fallback to first 10 general events if empty
     private var bookmarksToShow: [Event] {
-        guard bookmarkedEvents.isEmpty else {
-            return bookmarkedEvents
-        }
-        return events.filter { !$0.isResolved }.prefix(10).map { $0 }
+        let baseEvents = bookmarkedEvents.isEmpty 
+            ? events.filter { !$0.isResolved }.prefix(10).map { $0 }
+            : bookmarkedEvents
+        return filterEvents(baseEvents)
     }
 
     /// For You section: show for-you events, fallback to first 5 general events if empty
     private var forYouToShow: [Event] {
-        guard forYouEvents.isEmpty else {
-            return forYouEvents
+        let baseEvents = forYouEvents.isEmpty 
+            ? events.filter { !$0.isResolved }.prefix(5).map { $0 }
+            : forYouEvents
+        return filterEvents(baseEvents)
+    }
+    
+    /// Filter events based on search text and category
+    private func filterEvents(_ events: [Event]) -> [Event] {
+        events.filter { event in
+            let matchesCategory = selectedCategory == nil || event.category == selectedCategory
+            let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let matchesSearch = trimmed.isEmpty ||
+                event.title.localizedCaseInsensitiveContains(trimmed) ||
+                (event.description?.localizedCaseInsensitiveContains(trimmed) ?? false)
+            return matchesCategory && matchesSearch
         }
-        return events.filter { !$0.isResolved }.prefix(5).map { $0 }
     }
 
     var body: some View {
@@ -33,7 +46,13 @@ struct HomeView: View {
             GeometryReader { geo in
                 ZStack {
                     backgroundGradient(for: geo)
-                    contentBody(geo: geo)
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 8)
+                        header
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 6)
+                        contentBody(geo: geo)
+                    }
                 }
             }
             .navigationDestination(for: UUID.self) { eventId in
@@ -43,6 +62,7 @@ struct HomeView: View {
                     uuidToEventIdMap: uuidToEventIdMap,
                     eventDetailsCache: $eventDetailsCache
                 )
+                .transition(.slideFromTrailing)
             }
         }
         .task {
@@ -53,9 +73,7 @@ struct HomeView: View {
     @ViewBuilder
     private func contentBody(geo: GeometryProxy) -> some View {
         if isLoading && events.isEmpty {
-            ProgressView("Loading events...")
-                .progressViewStyle(.circular)
-                .tint(.white)
+            FullScreenLoadingView(message: "Loading events...")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let errorMessage, events.isEmpty {
             VStack(spacing: 12) {
@@ -72,26 +90,16 @@ struct HomeView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             ScrollView {
-                VStack(spacing: 16) {
-                    Spacer(minLength: 8)
-
-                    PageIntroHeader(
-                        title: "Home",
-                        subtitle: "Stay on top of the markets you care about"
-                    )
-                    .padding(.horizontal, 16)
-
+                LazyVStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Bookmarks")
                             .font(.dmMonoMedium(size: 20))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 16)
 
                         if bookmarksToShow.isEmpty {
                             Text("No bookmarks yet")
                                 .font(.dmMonoRegular(size: 14))
                                 .foregroundColor(.white.opacity(0.6))
-                                .padding(.horizontal, 16)
                                 .padding(.vertical, 12)
                         } else {
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -105,11 +113,12 @@ struct HomeView: View {
                                         .frame(width: max(260, geo.size.width * 0.72))
                                         .contentShape(Rectangle())
                                         .onTapGesture {
-                                            path.append(event.id)
+                                            withAnimation(.slideTransition) {
+                                                path.append(event.id)
+                                            }
                                         }
                                     }
                                 }
-                                .padding(.horizontal, 16)
                                 .padding(.vertical, 4)
                             }
                         }
@@ -119,31 +128,42 @@ struct HomeView: View {
                         Text("For You")
                             .font(.dmMonoMedium(size: 20))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 16)
 
                         if forYouToShow.isEmpty {
                             Text("No recommendations yet")
                                 .font(.dmMonoRegular(size: 14))
                                 .foregroundColor(.white.opacity(0.6))
-                                .padding(.horizontal, 16)
                                 .padding(.vertical, 12)
                         } else {
-                            LazyVStack(spacing: 14) {
-                                ForEach(forYouToShow) { event in
-                                    MarketCardView(
-                                        content: MarketCardContent(event: event),
-                                        handleOpen: {
+                            ForEach(forYouToShow) { event in
+                                MarketCardView(
+                                    content: MarketCardContent(event: event),
+                                    handleOpen: {
+                                        withAnimation(.slideTransition) {
                                             path.append(event.id)
                                         }
-                                    )
-                                }
+                                    }
+                                )
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 12)
                         }
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
+        }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            PageIntroHeader(
+                title: "Home",
+                subtitle: "Stay on top of the markets you care about"
+            )
+            HomeHeaderView(
+                searchText: $searchText,
+                selectedCategory: $selectedCategory
+            )
         }
     }
 
@@ -305,11 +325,8 @@ private struct EventDetailView: View {
     var body: some View {
         Group {
             if isLoading {
-                ProgressView("Loading event details...")
-                    .progressViewStyle(.circular)
-                    .tint(.white)
+                FullScreenLoadingView(message: "Loading event details...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black.ignoresSafeArea())
             } else if let errorMessage {
                 VStack(spacing: 12) {
                     Text("Unable to load event")

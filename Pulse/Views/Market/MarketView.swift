@@ -32,6 +32,7 @@ struct MarketView: View {
                     uuidToEventIdMap: uuidToEventIdMap,
                     eventDetailsCache: $eventDetailsCache
                 )
+                .transition(.slideFromTrailing)
             }
         }
         .task {
@@ -55,9 +56,7 @@ struct MarketView: View {
     @ViewBuilder
     private var contentBody: some View {
         if isLoading {
-            ProgressView("Loading markets...")
-                .progressViewStyle(.circular)
-                .tint(.white)
+            FullScreenLoadingView(message: "Loading markets...")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let errorMessage {
             VStack(spacing: 12) {
@@ -79,7 +78,9 @@ struct MarketView: View {
                         MarketCardView(
                             content: MarketCardContent(detail: detail),
                             handleOpen: {
-                                path.append(detail.id)
+                                withAnimation(.slideTransition) {
+                                    path.append(detail.id)
+                                }
                             }
                         )
                     }
@@ -185,11 +186,8 @@ private struct MarketEventDetailView: View {
     var body: some View {
         Group {
             if isLoading {
-                ProgressView("Loading event details...")
-                    .progressViewStyle(.circular)
-                    .tint(.white)
+                FullScreenLoadingView(message: "Loading event details...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black.ignoresSafeArea())
             } else if let errorMessage {
                 VStack(spacing: 12) {
                     Text("Unable to load event")

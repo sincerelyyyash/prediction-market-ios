@@ -34,9 +34,7 @@ struct EventCardView: View {
                 Color.white.opacity(0.04)
                     .frame(height: 100)
                     .overlay(
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .tint(.white.opacity(0.5))
+                        InlineLoadingView()
                     )
             case .success(let image):
                 image

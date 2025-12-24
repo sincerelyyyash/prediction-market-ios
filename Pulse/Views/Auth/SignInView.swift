@@ -55,9 +55,9 @@ struct SignInView: View {
             .disabled(isLoading)
 
             if isLoading {
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .tint(.white)
+                InlineLoadingView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black.opacity(0.3))
             }
         }
         .navigationBarBackButtonHidden(false)

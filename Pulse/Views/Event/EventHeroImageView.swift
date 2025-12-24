@@ -13,9 +13,7 @@ struct EventHeroImageView: View {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .empty:
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .tint(.white.opacity(0.6))
+                        InlineLoadingView()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .background(Color.white.opacity(0.04))
                     case .success(let image):

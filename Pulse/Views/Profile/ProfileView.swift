@@ -19,13 +19,22 @@ struct ProfileView: View {
             GeometryReader { geo in
                 ZStack {
                     backgroundGradient(for: geo)
-                    content
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 8)
+                        header
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 6)
+                        content
+                    }
                 }
             }
             .navigationDestination(for: ProfileRoute.self) { route in
-                switch route {
-                case .addFunds:
-                    AddFundsScreen(balance: $balance, handleSubmit: handleOnramp)
+                Group {
+                    switch route {
+                    case .addFunds:
+                        AddFundsScreen(balance: $balance, handleSubmit: handleOnramp)
+                            .transition(.slideFromTrailing)
+                    }
                 }
             }
         }
@@ -35,15 +44,12 @@ struct ProfileView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Profile")
-                .font(.dmMonoMedium(size: 26))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text("Manage your account and preferences")
-                .font(.dmMonoRegular(size: 13))
-                .foregroundColor(.white.opacity(0.75))
-                .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 12) {
+            PageIntroHeader(
+                title: "Profile",
+                subtitle: "Manage your account and preferences"
+            )
+            balanceCard
         }
     }
 
@@ -121,21 +127,25 @@ struct ProfileView: View {
                 title: "Add Funds",
                 subtitle: "Deposit to trading balance",
                 icon: "plus.circle.fill",
-                tint: .green
-            ) { path.append(.addFunds) }
+                tint: .white
+            ) {
+                withAnimation(.slideTransition) {
+                    path.append(.addFunds)
+                }
+            }
 
             actionRow(
                 title: "Transaction History",
                 subtitle: "View deposits and withdrawals",
                 icon: "clock.fill",
-                tint: .yellow
+                tint: .white
             ) {}
 
             actionRow(
                 title: "Help & Support",
                 subtitle: "FAQs and contact us",
                 icon: "questionmark.circle.fill",
-                tint: .purple
+                tint: .white
             ) {}
 
             Button {
@@ -180,11 +190,11 @@ struct ProfileView: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(tint.opacity(0.22))
+                        .fill(Color.white.opacity(0.1))
                         .frame(width: 40, height: 40)
                     Image(systemName: icon)
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(tint)
+                        .foregroundColor(.white.opacity(0.9))
                 }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title)
@@ -242,9 +252,7 @@ struct ProfileView: View {
     @ViewBuilder
     private var content: some View {
         if isLoading {
-            ProgressView("Loading profile...")
-                .progressViewStyle(.circular)
-                .tint(.white)
+            FullScreenLoadingView(message: "Loading profile...")
         } else if requiresAuth {
             VStack(spacing: 20) {
                 // Icon
@@ -313,33 +321,35 @@ struct ProfileView: View {
         } else {
             ScrollView {
                 VStack(spacing: 14) {
-                    Spacer(minLength: 8)
-                    header
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 2)
-
-                    balanceCard
-                        .padding(.horizontal, 16)
-
                     userCard
                         .padding(.horizontal, 16)
+                        .padding(.top, 8)
 
                     actionSection
                         .padding(.horizontal, 16)
                         .padding(.bottom, 16)
                 }
             }
+            .background(Color.black)
         }
     }
 
     private func loadProfileFast() async {
+        // If there's no JWT token at all, immediately sign out so the app
+        // transitions back to onboarding instead of showing an auth error.
+        if !TokenManager.shared.isAuthenticated() {
+            await MainActor.run {
+                AuthService.shared.signOut()
+            }
+            return
+        }
+
         await MainActor.run {
             isLoading = true
             errorMessage = nil
             requiresAuth = false
         }
 
-        
         await authService.restoreSessionIfNeeded()
         if let sessionUser = authService.session?.user {
             await MainActor.run {
@@ -373,7 +383,12 @@ struct ProfileView: View {
         } catch {
             await MainActor.run {
                 isLoading = false
-                errorMessage = error.localizedDescription
+                let message = error.localizedDescription
+                if message.lowercased().contains("jwt secret") {
+                    errorMessage = "Something went wrong while loading your profile. Please try again later."
+                } else {
+                    errorMessage = message
+                }
             }
         }
     }
@@ -444,9 +459,9 @@ private struct AddFundsScreen: View {
                     .padding(.bottom, 16)
                 }
                 if isSubmitting {
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .tint(.white)
+                    InlineLoadingView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black.opacity(0.3))
                 }
             }
         }

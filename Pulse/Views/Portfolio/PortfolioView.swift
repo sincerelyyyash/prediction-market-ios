@@ -14,11 +14,8 @@ fileprivate struct PortfolioEventDetailView: View {
     var body: some View {
         Group {
             if isLoading {
-                ProgressView("Loading event details...")
-                    .progressViewStyle(.circular)
-                    .tint(.white)
+                FullScreenLoadingView(message: "Loading event details...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black.ignoresSafeArea())
             } else if let errorMessage {
                 VStack(spacing: 12) {
                     Text("Unable to load event")
@@ -125,7 +122,13 @@ struct PortfolioView: View {
             GeometryReader { geo in
                 ZStack {
                     backgroundGradient(for: geo)
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 8)
+                        header
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 6)
                     contentBody
+                    }
                 }
             }
             .navigationDestination(for: UUID.self) { eventId in
@@ -135,6 +138,7 @@ struct PortfolioView: View {
                     uuidToEventIdMap: uuidToEventIdMap,
                     eventDetailsCache: $eventDetailsCache
                 )
+                .transition(.slideFromTrailing)
             }
         }
         .task {
@@ -251,9 +255,7 @@ struct PortfolioView: View {
     @ViewBuilder
     private var contentBody: some View {
         if isLoading && portfolioPositions.isEmpty {
-            ProgressView("Loading portfolio...")
-                .progressViewStyle(.circular)
-                .tint(.white)
+            FullScreenLoadingView(message: "Loading portfolio...")
         } else if requiresAuth {
             VStack(spacing: 20) {
                 // Icon
@@ -320,12 +322,6 @@ struct PortfolioView: View {
             }
         } else {
             VStack(spacing: 0) {
-                Spacer(minLength: 8)
-
-                header
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 10)
-
                 tabFilters
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
@@ -348,7 +344,9 @@ struct PortfolioView: View {
                                     )
                                     .onTapGesture {
                                         if let eventUUID = meta?.eventUUID {
-                                            path.append(eventUUID)
+                                            withAnimation(.slideTransition) {
+                                                path.append(eventUUID)
+                                            }
                                         }
                                     }
                                 }
@@ -387,6 +385,15 @@ struct PortfolioView: View {
     }
 
     private func loadPortfolioData() async {
+        // If there's no JWT token at all, immediately sign out so the app
+        // transitions back to onboarding instead of showing an auth error.
+        if !TokenManager.shared.isAuthenticated() {
+            await MainActor.run {
+                AuthService.shared.signOut()
+            }
+            return
+        }
+
         await MainActor.run {
             isLoading = true
             errorMessage = nil
@@ -414,7 +421,12 @@ struct PortfolioView: View {
         } catch {
             await MainActor.run {
                 isLoading = false
-                errorMessage = error.localizedDescription
+                let message = error.localizedDescription
+                if message.lowercased().contains("jwt secret") {
+                    errorMessage = "Something went wrong while loading your portfolio. Please try again later."
+                } else {
+                    errorMessage = message
+                }
             }
             return
         }
