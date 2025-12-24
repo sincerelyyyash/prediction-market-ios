@@ -43,9 +43,9 @@ struct SignInView: View {
                 Button(action: navigateToSignUp) {
                     HStack(spacing: 6) {
                         Text("Don't have an account?")
-                            .foregroundColor(.white.opacity(0.8))
+                            .foregroundColor(AppColors.secondaryText(opacity: 0.8))
                         Text("Sign Up")
-                            .foregroundColor(.white)
+                            .foregroundColor(AppColors.primaryText)
                     }
                     .font(.dmMonoRegular(size: 15))
                     .padding(.top, 8)
@@ -57,7 +57,7 @@ struct SignInView: View {
             if isLoading {
                 InlineLoadingView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black.opacity(0.3))
+                    .background(AppColors.overlayBackground(opacity: 0.3))
             }
         }
         .navigationBarBackButtonHidden(false)
@@ -96,6 +96,5 @@ struct SignInView: View {
             onAuthSuccess: {},
             navigateToSignUp: {}
         )
-        .preferredColorScheme(.dark)
     }
 }

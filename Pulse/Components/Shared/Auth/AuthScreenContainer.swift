@@ -18,16 +18,16 @@ struct AuthScreenContainer<Fields: View>: View {
                     VStack(spacing: 16) {
                         Text(title)
                             .font(.custom("DMMono-Medium", size: 28))
-                            .foregroundColor(.white)
+                            .foregroundColor(AppColors.primaryText)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         fields
                         Button(action: handleAction) {
                             Text(actionTitle)
                                 .font(.custom("DMMono-Medium", size: 20))
-                                .foregroundColor(.black)
+                                .foregroundColor(AppColors.background)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
-                                .background(Color.white)
+                                .background(AppColors.primaryText)
                                 .cornerRadius(14)
                         }
                         .padding(.top, 10)
