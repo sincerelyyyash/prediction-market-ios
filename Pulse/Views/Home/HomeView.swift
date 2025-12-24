@@ -79,10 +79,10 @@ struct HomeView: View {
             VStack(spacing: 12) {
                 Text("Unable to load events")
                     .font(.dmMonoMedium(size: 17))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                 Text(errorMessage)
                     .font(.dmMonoRegular(size: 15))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                     .multilineTextAlignment(.center)
                 Button("Try Again", action: { Task { await loadEvents() } })
                     .buttonStyle(.borderedProminent)
@@ -94,12 +94,12 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Bookmarks")
                             .font(.dmMonoMedium(size: 20))
-                            .foregroundColor(.white)
+                            .foregroundColor(AppColors.primaryText)
 
                         if bookmarksToShow.isEmpty {
                             Text("No bookmarks yet")
                                 .font(.dmMonoRegular(size: 14))
-                                .foregroundColor(.white.opacity(0.6))
+                                .foregroundColor(AppColors.secondaryText(opacity: 0.6))
                                 .padding(.vertical, 12)
                         } else {
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -127,12 +127,12 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("For You")
                             .font(.dmMonoMedium(size: 20))
-                            .foregroundColor(.white)
+                            .foregroundColor(AppColors.primaryText)
 
                         if forYouToShow.isEmpty {
                             Text("No recommendations yet")
                                 .font(.dmMonoRegular(size: 14))
-                                .foregroundColor(.white.opacity(0.6))
+                                .foregroundColor(AppColors.secondaryText(opacity: 0.6))
                                 .padding(.vertical, 12)
                         } else {
                             ForEach(forYouToShow) { event in
@@ -274,12 +274,12 @@ struct HomeView: View {
 
     private func backgroundGradient(for geo: GeometryProxy) -> some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
             RadialGradient(
                 gradient: Gradient(stops: [
-                    .init(color: .white, location: 0.0),
-                    .init(color: Color(red: 0.7, green: 0.7, blue: 0.75), location: 0.0),
-                    .init(color: .black, location: 0.4)
+                    .init(color: AppColors.gradientStart, location: 0.0),
+                    .init(color: AppColors.gradientMiddle, location: 0.15),
+                    .init(color: AppColors.gradientEnd, location: 0.4)
                 ]),
                 center: .top,
                 startRadius: 0,
@@ -331,10 +331,10 @@ private struct EventDetailView: View {
                 VStack(spacing: 12) {
                     Text("Unable to load event")
                         .font(.dmMonoMedium(size: 17))
-                        .foregroundColor(.white)
+                        .foregroundColor(AppColors.primaryText)
                     Text(errorMessage)
                         .font(.dmMonoRegular(size: 15))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                         .multilineTextAlignment(.center)
                     Button("Retry") {
                         Task { await loadEventDetail() }
@@ -342,15 +342,14 @@ private struct EventDetailView: View {
                     .buttonStyle(.borderedProminent)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black.ignoresSafeArea())
+                .background(AppColors.background.ignoresSafeArea())
             } else if let detail = eventDetail ?? cachedDetail {
                 EventView(event: detail)
-                    .preferredColorScheme(.dark)
             } else {
                 Text("Event not found")
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.8))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black.ignoresSafeArea())
+                    .background(AppColors.background.ignoresSafeArea())
             }
         }
         .task {
@@ -409,5 +408,4 @@ private struct EventDetailView: View {
 
 #Preview {
     HomeView()
-        .preferredColorScheme(.dark)
 }

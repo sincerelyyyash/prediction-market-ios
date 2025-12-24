@@ -18,10 +18,10 @@ struct EventCardView: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(AppColors.cardBackground(opacity: 0.06))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        .stroke(AppColors.border(opacity: 0.12), lineWidth: 1)
                 )
         )
     }
@@ -31,7 +31,7 @@ struct EventCardView: View {
         AsyncImage(url: url) { phase in
             switch phase {
             case .empty:
-                Color.white.opacity(0.04)
+                AppColors.cardBackground(opacity: 0.04)
                     .frame(height: 100)
                     .overlay(
                         InlineLoadingView()
@@ -55,18 +55,18 @@ struct EventCardView: View {
         HStack {
             Label(event.category.rawValue, systemImage: event.category.systemIcon)
                 .font(.dmMonoMedium(size: 12))
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.8))
             Spacer()
             Text(event.timeRemainingText)
                 .font(.dmMonoMedium(size: 12))
-                .foregroundColor(event.isResolved ? .white.opacity(0.7) : .white.opacity(0.8))
+                .foregroundColor(event.isResolved ? AppColors.secondaryText(opacity: 0.7) : AppColors.secondaryText(opacity: 0.8))
         }
     }
 
     private var titleSection: some View {
         Text(event.title)
             .font(.dmMonoMedium(size: 17))
-            .foregroundColor(.white)
+            .foregroundColor(AppColors.primaryText)
             .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -99,7 +99,7 @@ struct EventCardView: View {
         HStack(spacing: 8) {
             Text("Outcome:")
                 .font(.dmMonoRegular(size: 13))
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.8))
             Text(event.outcome == .yes ? "Yes" : "No")
                 .font(.dmMonoMedium(size: 13))
                 .foregroundColor(event.outcome == .yes ? .green : .red)
@@ -112,7 +112,7 @@ struct EventCardView: View {
             HStack {
                 Text("Market Odds")
                     .font(.dmMonoRegular(size: 12))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                 Spacer()
             }
             HStack(spacing: 10) {

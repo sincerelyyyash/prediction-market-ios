@@ -14,13 +14,13 @@ struct CategoryChipView: View {
                 Text(title)
                     .font(.dmMonoRegular(size: 13))
             }
-            .foregroundColor(isSelected ? .black : .white)
+            .foregroundColor(isSelected ? AppColors.background : AppColors.primaryText)
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
-            .background(isSelected ? Color.white : Color.white.opacity(0.1))
+            .background(isSelected ? AppColors.primaryText : AppColors.cardBackground(opacity: 0.1))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(isSelected ? 0.0 : 0.18), lineWidth: 1)
+                    .stroke(AppColors.border(opacity: isSelected ? 0.0 : 0.18), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
