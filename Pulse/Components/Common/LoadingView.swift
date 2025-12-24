@@ -1,0 +1,159 @@
+import SwiftUI
+
+struct LoadingView: View {
+    let message: String?
+    let size: LoadingSize
+    
+    enum LoadingSize {
+        case small
+        case medium
+        case large
+        
+        var spinnerSize: CGFloat {
+            switch self {
+            case .small: return 20
+            case .medium: return 32
+            case .large: return 48
+            }
+        }
+        
+        var strokeWidth: CGFloat {
+            switch self {
+            case .small: return 2
+            case .medium: return 3
+            case .large: return 4
+            }
+        }
+    }
+    
+    init(message: String? = nil, size: LoadingSize = .medium) {
+        self.message = message
+        self.size = size
+    }
+    
+    @State private var rotation: Double = 0
+    @State private var scale: CGFloat = 0.8
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                // Outer pulsing ring
+                Circle()
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.3),
+                                Color.white.opacity(0.1),
+                                Color.white.opacity(0.3)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: size.strokeWidth
+                    )
+                    .frame(width: size.spinnerSize, height: size.spinnerSize)
+                    .scaleEffect(scale)
+                    .opacity(0.6)
+                
+                // Rotating spinner
+                Circle()
+                    .trim(from: 0, to: 0.7)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.9),
+                                Color.white.opacity(0.5)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        style: StrokeStyle(lineWidth: size.strokeWidth, lineCap: .round)
+                    )
+                    .frame(width: size.spinnerSize, height: size.spinnerSize)
+                    .rotationEffect(.degrees(rotation))
+            }
+            
+            if let message = message {
+                Text(message)
+                    .font(.dmMonoRegular(size: 14))
+                    .foregroundColor(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 4)
+            }
+        }
+        .onAppear {
+            withAnimation(
+                Animation
+                    .linear(duration: 1.0)
+                    .repeatForever(autoreverses: false)
+            ) {
+                rotation = 360
+            }
+            
+            withAnimation(
+                Animation
+                    .easeInOut(duration: 1.2)
+                    .repeatForever(autoreverses: true)
+            ) {
+                scale = 1.1
+            }
+        }
+    }
+}
+
+// MARK: - Full Screen Loading View
+struct FullScreenLoadingView: View {
+    let message: String?
+    
+    init(message: String? = nil) {
+        self.message = message
+    }
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            LoadingView(message: message, size: .large)
+        }
+    }
+}
+
+// MARK: - Inline Loading View (for buttons, cards, etc.)
+struct InlineLoadingView: View {
+    let message: String?
+    let color: Color
+    
+    init(message: String? = nil, color: Color = .white) {
+        self.message = message
+        self.color = color
+    }
+    
+    @State private var rotation: Double = 0
+    
+    var body: some View {
+        Group {
+            if message != nil {
+                LoadingView(message: message, size: .small)
+            } else {
+                // Simple spinner for buttons
+                Circle()
+                    .trim(from: 0, to: 0.7)
+                    .stroke(
+                        color.opacity(0.8),
+                        style: StrokeStyle(lineWidth: 2, lineCap: .round)
+                    )
+                    .frame(width: 16, height: 16)
+                    .rotationEffect(.degrees(rotation))
+                    .onAppear {
+                        withAnimation(
+                            Animation
+                                .linear(duration: 0.8)
+                                .repeatForever(autoreverses: false)
+                        ) {
+                            rotation = 360
+                        }
+                    }
+            }
+        }
+    }
+}
+
