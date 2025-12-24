@@ -9,10 +9,10 @@ struct OnboardingCTAView: View {
             Button(action: handleStartTrading) {
                 Text(Constants.onboardinButtonString)
                     .font(.dmMonoMedium(size: 20))
-                    .foregroundColor(.black)
+                    .foregroundColor(AppColors.background)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)
-                    .background(Color.white)
+                    .background(AppColors.primaryText)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .contentShape(Rectangle())
             }
@@ -22,10 +22,10 @@ struct OnboardingCTAView: View {
             
             Button(action: handleSignUp) {
                 HStack(spacing: 6) {
-                    Text("Don’t have an account?")
-                        .foregroundColor(.white.opacity(0.8))
+                    Text("Don't have an account?")
+                        .foregroundColor(AppColors.secondaryText(opacity: 0.8))
                     Text("Sign Up")
-                        .foregroundColor(.white)
+                        .foregroundColor(AppColors.primaryText)
                 }
                 .font(.dmMonoRegular(size: 16))
                 .padding(.vertical, 8)

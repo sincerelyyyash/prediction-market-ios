@@ -5,7 +5,7 @@ struct OnboardingCopyView: View {
         VStack(spacing: 10) {
             Text(Constants.onboardingString)
                 .font(.custom("DMMono-Light", size: 28))
-                .foregroundColor(.white)
+                .foregroundColor(AppColors.primaryText)
                 .multilineTextAlignment(.center)
                 .lineSpacing(0)
                 .lineLimit(1)
@@ -14,7 +14,7 @@ struct OnboardingCopyView: View {
                 .accessibilityLabel(Constants.onboardingString)
             Text("Capture the Pulse of Market.")
                 .font(.custom("DMMono-Light", size: 16))
-                .foregroundColor(.white.opacity(0.78))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.78))
                 .multilineTextAlignment(.center)
                 .lineSpacing(2)
                 .padding(.horizontal, 36)

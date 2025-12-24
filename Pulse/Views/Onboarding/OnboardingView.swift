@@ -14,7 +14,6 @@ struct OnboardingView: View {
         ZStack {
             if showApp {
                 ContentView()
-                    .preferredColorScheme(.dark)
                     .transition(.fadeTransition)
             } else {
                 NavigationStack(path: $path) {
@@ -48,14 +47,12 @@ struct OnboardingView: View {
                                     onAuthSuccess: handleAuthSuccess,
                                     navigateToSignUp: { handleNavigateToSignUp() }
                                 )
-                                .preferredColorScheme(.dark)
                                 .transition(.slideFromTrailing)
                             case .signUp:
                                 SignUpView(
                                     onAuthSuccess: handleAuthSuccess,
                                     navigateToSignIn: { handleNavigateToSignIn() }
                                 )
-                                .preferredColorScheme(.dark)
                                 .transition(.slideFromTrailing)
                             }
                         }
@@ -112,5 +109,4 @@ struct OnboardingView: View {
 
 #Preview {
     OnboardingView()
-        .preferredColorScheme(.dark)
 }

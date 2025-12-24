@@ -10,8 +10,8 @@ struct OnboardingHeroView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            .white.opacity(glow ? 0.16 : 0.06),
-                            .white.opacity(0.0)
+                            AppColors.cardBackground(opacity: glow ? 0.16 : 0.06),
+                            AppColors.cardBackground(opacity: 0.0)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
