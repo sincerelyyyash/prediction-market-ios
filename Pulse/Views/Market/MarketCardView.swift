@@ -15,10 +15,10 @@ struct MarketCardView: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(AppColors.cardBackground(opacity: 0.06))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        .stroke(AppColors.border(opacity: 0.12), lineWidth: 1)
                 )
         )
         .contentShape(Rectangle())
@@ -31,11 +31,11 @@ struct MarketCardView: View {
         HStack {
             Label(content.categoryTitle, systemImage: content.categoryIconName)
                 .font(.dmMonoMedium(size: 12))
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.8))
             Spacer()
             Text(content.timeRemainingText)
                 .font(.dmMonoMedium(size: 12))
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.8))
         }
     }
 
@@ -43,12 +43,12 @@ struct MarketCardView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(content.title)
                 .font(.dmMonoMedium(size: 17))
-                .foregroundColor(.white)
+                .foregroundColor(AppColors.primaryText)
                 .fixedSize(horizontal: false, vertical: true)
             if let subtitle = content.subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.dmMonoRegular(size: 13))
-                    .foregroundColor(.white.opacity(0.75))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.75))
                     .lineLimit(2)
             }
         }
@@ -58,7 +58,7 @@ struct MarketCardView: View {
         HStack(spacing: 8) {
             Text("Trading \(content.leadingOutcomeName) — top market right now")
                 .font(.dmMonoRegular(size: 12))
-                .foregroundColor(.white.opacity(0.72))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.72))
                 .lineLimit(1)
             Spacer()
         }
