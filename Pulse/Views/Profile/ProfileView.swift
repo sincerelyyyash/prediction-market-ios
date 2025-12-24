@@ -58,24 +58,24 @@ struct ProfileView: View {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text("Current Balance")
                     .font(.dmMonoRegular(size: 14))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                 Spacer()
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(formattedCurrency(balance))
                     .font(.dmMonoMedium(size: 30))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                 Spacer()
             }
         }
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(AppColors.cardBackground(opacity: 0.06))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.08))
+                        .strokeBorder(AppColors.border(opacity: 0.08))
                 )
         )
         .accessibilityElement(children: .combine)
@@ -87,33 +87,33 @@ struct ProfileView: View {
         HStack(alignment: .center, spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(Color.white.opacity(0.08))
+                    .fill(AppColors.cardBackground(opacity: 0.08))
                     .frame(width: 56, height: 56)
                 Image(systemName: "person.crop.circle.fill")
                     .font(.system(size: 28))
-                    .foregroundColor(.white.opacity(0.9))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.9))
             }
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(userProfile?.name ?? "Trader")
                     .font(.dmMonoMedium(size: 17))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                 Text(userProfile?.email ?? "--")
                     .font(.dmMonoRegular(size: 15))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                 Text(memberSince)
                     .font(.dmMonoRegular(size: 13))
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.6))
             }
             Spacer()
         }
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.05))
+                .fill(AppColors.cardBackground(opacity: 0.05))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.08))
+                        .strokeBorder(AppColors.border(opacity: 0.08))
                 )
         )
         .accessibilityElement(children: .combine)
@@ -127,7 +127,7 @@ struct ProfileView: View {
                 title: "Add Funds",
                 subtitle: "Deposit to trading balance",
                 icon: "plus.circle.fill",
-                tint: .white
+                tint: AppColors.primaryText
             ) {
                 withAnimation(.slideTransition) {
                     path.append(.addFunds)
@@ -138,14 +138,14 @@ struct ProfileView: View {
                 title: "Transaction History",
                 subtitle: "View deposits and withdrawals",
                 icon: "clock.fill",
-                tint: .white
+                tint: AppColors.primaryText
             ) {}
 
             actionRow(
                 title: "Help & Support",
                 subtitle: "FAQs and contact us",
                 icon: "questionmark.circle.fill",
-                tint: .white
+                tint: AppColors.primaryText
             ) {}
 
             Button {
@@ -166,17 +166,17 @@ struct ProfileView: View {
                             .foregroundColor(.red)
                         Text("Sign out of your account")
                             .font(.dmMonoRegular(size: 13))
-                            .foregroundColor(.white.opacity(0.6))
+                            .foregroundColor(AppColors.secondaryText(opacity: 0.6))
                     }
                     Spacer()
                 }
                 .padding(14)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.white.opacity(0.05))
+                        .fill(AppColors.cardBackground(opacity: 0.05))
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.08))
+                                .strokeBorder(AppColors.border(opacity: 0.08))
                         )
                 )
             }
@@ -190,32 +190,32 @@ struct ProfileView: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.white.opacity(0.1))
+                        .fill(AppColors.cardBackground(opacity: 0.1))
                         .frame(width: 40, height: 40)
                     Image(systemName: icon)
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundColor(AppColors.secondaryText(opacity: 0.9))
                 }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title)
                             .font(.dmMonoMedium(size: 17))
-                            .foregroundColor(.white)
+                            .foregroundColor(AppColors.primaryText)
                         Text(subtitle)
                             .font(.dmMonoRegular(size: 13))
-                            .foregroundColor(.white.opacity(0.6))
+                            .foregroundColor(AppColors.secondaryText(opacity: 0.6))
                     }
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.5))
             }
             .padding(14)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.white.opacity(0.05))
+                    .fill(AppColors.cardBackground(opacity: 0.05))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.08))
+                            .strokeBorder(AppColors.border(opacity: 0.08))
                     )
             )
         }
@@ -233,12 +233,12 @@ struct ProfileView: View {
 
     private func backgroundGradient(for geo: GeometryProxy) -> some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
             RadialGradient(
                 gradient: Gradient(stops: [
-                    .init(color: .white, location: 0.0),
-                    .init(color: Color(red: 0.7, green: 0.7, blue: 0.75), location: 0.0),
-                    .init(color: .black, location: 0.4)
+                    .init(color: AppColors.gradientStart, location: 0.0),
+                    .init(color: AppColors.gradientMiddle, location: 0.15),
+                    .init(color: AppColors.gradientEnd, location: 0.4)
                 ]),
                 center: .top,
                 startRadius: 0,
@@ -258,24 +258,24 @@ struct ProfileView: View {
                 // Icon
                 ZStack {
                     Circle()
-                        .fill(Color.white.opacity(0.08))
+                        .fill(AppColors.cardBackground(opacity: 0.08))
                         .frame(width: 80, height: 80)
                     Image(systemName: "person.crop.circle.badge.questionmark")
                         .font(.system(size: 36))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                 }
                 .padding(.bottom, 4)
                 
                 // Title
                 Text("Sign in to view your profile")
                     .font(.dmMonoMedium(size: 20))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                     .multilineTextAlignment(.center)
                 
                 // Subtitle
                 Text("Access your account details, balance, and manage your trading preferences.")
                     .font(.dmMonoRegular(size: 14))
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.6))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
                 
@@ -289,10 +289,10 @@ struct ProfileView: View {
                         Text("Sign In")
                             .font(.dmMonoMedium(size: 16))
                     }
-                    .foregroundColor(.black)
+                    .foregroundColor(AppColors.background)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.white)
+                    .background(AppColors.primaryText)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -306,10 +306,10 @@ struct ProfileView: View {
             VStack(spacing: 12) {
                 Text("Unable to load profile")
                     .font(.dmMonoMedium(size: 17))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                 Text(errorMessage)
                     .font(.dmMonoRegular(size: 15))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
                 Button("Retry") {
@@ -330,7 +330,7 @@ struct ProfileView: View {
                         .padding(.bottom, 16)
                 }
             }
-            .background(Color.black)
+            .background(AppColors.background)
         }
     }
 
@@ -416,7 +416,6 @@ struct ProfileView: View {
 
 #Preview {
     ProfileView()
-        .preferredColorScheme(.dark)
 }
 
 // MARK: - Inline Screens
@@ -438,7 +437,7 @@ private struct AddFundsScreen: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Deposit to your trading balance")
                                 .font(.dmMonoRegular(size: 14))
-                                .foregroundColor(.white.opacity(0.75))
+                                .foregroundColor(AppColors.secondaryText(opacity: 0.75))
                         }
                         .padding(.horizontal, 16)
 
@@ -461,7 +460,7 @@ private struct AddFundsScreen: View {
                 if isSubmitting {
                     InlineLoadingView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.black.opacity(0.3))
+                        .background(AppColors.overlayBackground(opacity: 0.3))
                 }
             }
         }
@@ -472,24 +471,24 @@ private struct AddFundsScreen: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Amount (USD)")
                 .font(.dmMonoRegular(size: 15))
-                .foregroundColor(.white.opacity(0.75))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.75))
             HStack(spacing: 10) {
                 Text("$")
                     .font(.dmMonoMedium(size: 20))
-                    .foregroundColor(.white.opacity(0.85))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.85))
                 TextField("0.00", text: $amountText)
                     .keyboardType(.decimalPad)
                     .font(.dmMonoMedium(size: 20))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.white.opacity(0.06))
+                    .fill(AppColors.cardBackground(opacity: 0.06))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.08))
+                            .strokeBorder(AppColors.border(opacity: 0.08))
                     )
             )
         }
@@ -499,10 +498,10 @@ private struct AddFundsScreen: View {
         Button(action: action) {
             Text(title)
                 .font(.dmMonoMedium(size: 17))
-                .foregroundColor(.black)
+                .foregroundColor(AppColors.background)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(Color.white)
+                .background(AppColors.primaryText)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -536,12 +535,12 @@ private struct AddFundsScreen: View {
 
     private func backgroundGradient(for geo: GeometryProxy) -> some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
             RadialGradient(
                 gradient: Gradient(stops: [
-                    .init(color: .white, location: 0.0),
-                    .init(color: Color(red: 0.7, green: 0.7, blue: 0.75), location: 0.0),
-                    .init(color: .black, location: 0.4)
+                    .init(color: AppColors.gradientStart, location: 0.0),
+                    .init(color: AppColors.gradientMiddle, location: 0.15),
+                    .init(color: AppColors.gradientEnd, location: 0.4)
                 ]),
                 center: .top,
                 startRadius: 0,
@@ -567,7 +566,7 @@ private struct WithdrawFundsScreen: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Transfer funds to your bank")
                                 .font(.dmMonoRegular(size: 14))
-                                .foregroundColor(.white.opacity(0.75))
+                                .foregroundColor(AppColors.secondaryText(opacity: 0.75))
                         }
                         .padding(.horizontal, 16)
 
@@ -589,24 +588,24 @@ private struct WithdrawFundsScreen: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Amount (USD)")
                 .font(.dmMonoRegular(size: 15))
-                .foregroundColor(.white.opacity(0.75))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.75))
             HStack(spacing: 10) {
                 Text("$")
                     .font(.dmMonoMedium(size: 20))
-                    .foregroundColor(.white.opacity(0.85))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.85))
                 TextField("0.00", text: $amountText)
                     .keyboardType(.decimalPad)
                     .font(.dmMonoMedium(size: 20))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.white.opacity(0.06))
+                    .fill(AppColors.cardBackground(opacity: 0.06))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.08))
+                            .strokeBorder(AppColors.border(opacity: 0.08))
                     )
             )
         }
@@ -616,10 +615,10 @@ private struct WithdrawFundsScreen: View {
         Button(action: action) {
             Text(title)
                 .font(.dmMonoMedium(size: 17))
-                .foregroundColor(.black)
+                .foregroundColor(AppColors.background)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(Color.white)
+                .background(AppColors.primaryText)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -637,12 +636,12 @@ private struct WithdrawFundsScreen: View {
 
     private func backgroundGradient(for geo: GeometryProxy) -> some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
             RadialGradient(
                 gradient: Gradient(stops: [
-                    .init(color: .white, location: 0.0),
-                    .init(color: Color(red: 0.7, green: 0.7, blue: 0.75), location: 0.0),
-                    .init(color: .black, location: 0.4)
+                    .init(color: AppColors.gradientStart, location: 0.0),
+                    .init(color: AppColors.gradientMiddle, location: 0.15),
+                    .init(color: AppColors.gradientEnd, location: 0.4)
                 ]),
                 center: .top,
                 startRadius: 0,

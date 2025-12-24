@@ -20,10 +20,10 @@ fileprivate struct PortfolioEventDetailView: View {
                 VStack(spacing: 12) {
                     Text("Unable to load event")
                         .font(.dmMonoMedium(size: 17))
-                        .foregroundColor(.white)
+                        .foregroundColor(AppColors.primaryText)
                     Text(errorMessage)
                         .font(.dmMonoRegular(size: 15))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                         .multilineTextAlignment(.center)
                     Button("Retry") {
                         Task { await loadEventDetail() }
@@ -31,15 +31,14 @@ fileprivate struct PortfolioEventDetailView: View {
                     .buttonStyle(.borderedProminent)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black.ignoresSafeArea())
+                .background(AppColors.background.ignoresSafeArea())
             } else if let detail = eventDetail ?? cachedDetail {
                 EventView(event: detail)
-                    .preferredColorScheme(.dark)
             } else {
                 Text("Event not found")
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.8))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black.ignoresSafeArea())
+                    .background(AppColors.background.ignoresSafeArea())
             }
         }
         .task {
@@ -195,7 +194,7 @@ struct PortfolioView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Total PnL")
                         .font(.dmMonoRegular(size: 15))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text(formattedCurrency(totalPnLValue))
                             .font(.dmMonoMedium(size: 28))
@@ -209,10 +208,10 @@ struct PortfolioView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.white.opacity(0.06))
+                        .fill(AppColors.cardBackground(opacity: 0.06))
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.08))
+                                .strokeBorder(AppColors.border(opacity: 0.08))
                         )
                 )
                 .accessibilityElement(children: .combine)
@@ -236,12 +235,12 @@ struct PortfolioView: View {
 
     private func backgroundGradient(for geo: GeometryProxy) -> some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
             RadialGradient(
                 gradient: Gradient(stops: [
-                    .init(color: .white, location: 0.0),
-                    .init(color: Color(red: 0.7, green: 0.7, blue: 0.75), location: 0.0),
-                    .init(color: .black, location: 0.4)
+                    .init(color: AppColors.gradientStart, location: 0.0),
+                    .init(color: AppColors.gradientMiddle, location: 0.15),
+                    .init(color: AppColors.gradientEnd, location: 0.4)
                 ]),
                 center: .top,
                 startRadius: 0,
@@ -261,24 +260,24 @@ struct PortfolioView: View {
                 // Icon
                 ZStack {
                     Circle()
-                        .fill(Color.white.opacity(0.08))
+                        .fill(AppColors.cardBackground(opacity: 0.08))
                         .frame(width: 80, height: 80)
                     Image(systemName: "chart.pie.fill")
                         .font(.system(size: 36))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                 }
                 .padding(.bottom, 4)
                 
                 // Title
                 Text("Sign in to view your positions")
                     .font(.dmMonoMedium(size: 20))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                     .multilineTextAlignment(.center)
                 
                 // Subtitle
                 Text("Track your PnL, open positions, and order history all in one place.")
                     .font(.dmMonoRegular(size: 14))
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.6))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
                 
@@ -292,10 +291,10 @@ struct PortfolioView: View {
                         Text("Sign In")
                             .font(.dmMonoMedium(size: 16))
                     }
-                    .foregroundColor(.black)
+                    .foregroundColor(AppColors.background)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.white)
+                    .background(AppColors.primaryText)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -309,10 +308,10 @@ struct PortfolioView: View {
             VStack(spacing: 12) {
                 Text("Unable to load portfolio")
                     .font(.dmMonoMedium(size: 17))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                 Text(errorMessage)
                     .font(.dmMonoRegular(size: 15))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                     .multilineTextAlignment(.center)
                 Button("Retry") {
                     Task { await loadPortfolioData() }
@@ -379,7 +378,7 @@ struct PortfolioView: View {
     private func emptyState(message: String) -> some View {
         Text(message)
             .font(.dmMonoRegular(size: 13))
-            .foregroundColor(.white.opacity(0.7))
+            .foregroundColor(AppColors.secondaryText(opacity: 0.7))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 24)
     }
@@ -560,11 +559,11 @@ private struct PortfolioPositionRow: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(marketName)
                     .font(.dmMonoMedium(size: 17))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                 Spacer()
                 Text("Qty: \(position.quantity)")
                     .font(.dmMonoMedium(size: 17))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
             }
             HStack(spacing: 10) {
                 statChip(title: "Price", value: formattedPrice)
@@ -575,10 +574,10 @@ private struct PortfolioPositionRow: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.05))
+                .fill(AppColors.cardBackground(opacity: 0.05))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.08))
+                        .strokeBorder(AppColors.border(opacity: 0.08))
                 )
         )
     }
@@ -587,16 +586,16 @@ private struct PortfolioPositionRow: View {
         HStack(spacing: 6) {
             Text(title)
                 .font(.dmMonoRegular(size: 12))
-                .foregroundColor(.white.opacity(0.7))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.7))
             Text(value)
                 .font(.dmMonoMedium(size: 12))
-                .foregroundColor(.white)
+                .foregroundColor(AppColors.primaryText)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(
             Capsule(style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(AppColors.cardBackground(opacity: 0.06))
         )
     }
 }
@@ -609,13 +608,13 @@ private struct OrderRow: View {
             HStack(spacing: 8) {
                 Text(order.side.rawValue.uppercased())
                     .font(.dmMonoMedium(size: 17))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                 Spacer()
                 statusBadge
             }
             Text("Market \(order.marketId)")
                 .font(.dmMonoRegular(size: 15))
-                .foregroundColor(.white.opacity(0.65))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.65))
             HStack(spacing: 10) {
                 statChip(title: "Qty", value: "\(order.originalQuantity)")
                 statChip(title: "Price", value: "\(order.price)")
@@ -626,10 +625,10 @@ private struct OrderRow: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.05))
+                .fill(AppColors.cardBackground(opacity: 0.05))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.08))
+                        .strokeBorder(AppColors.border(opacity: 0.08))
                 )
         )
     }
@@ -662,22 +661,21 @@ private struct OrderRow: View {
         HStack(spacing: 6) {
             Text(title)
                 .font(.dmMonoRegular(size: 12))
-                .foregroundColor(.white.opacity(0.7))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.7))
             Text(value)
                 .font(.dmMonoMedium(size: 12))
-                .foregroundColor(.white)
+                .foregroundColor(AppColors.primaryText)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(
             Capsule(style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(AppColors.cardBackground(opacity: 0.06))
         )
     }
 }
 
 #Preview {
     PortfolioView()
-        .preferredColorScheme(.dark)
 }
 
