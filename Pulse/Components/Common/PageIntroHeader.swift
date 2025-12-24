@@ -8,12 +8,12 @@ struct PageIntroHeader: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.dmMonoMedium(size: 26))
-                .foregroundColor(.white)
+                .foregroundColor(AppColors.primaryText)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(subtitle)
                 .font(.dmMonoRegular(size: 13))
-                .foregroundColor(.white.opacity(0.75))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.75))
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }

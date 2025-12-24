@@ -13,10 +13,10 @@ struct ProbabilityPillView: View {
             Text("\(label) \(percentageText)")
                 .font(.dmMonoMedium(size: 12))
         }
-        .foregroundColor(.white)
+        .foregroundColor(AppColors.primaryText)
         .padding(.vertical, 6)
         .padding(.horizontal, 10)
-        .background(Color.white.opacity(0.08))
+        .background(AppColors.cardBackground(opacity: 0.08))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 

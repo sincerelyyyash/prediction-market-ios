@@ -42,9 +42,9 @@ struct LoadingView: View {
                     .stroke(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.3),
-                                Color.white.opacity(0.1),
-                                Color.white.opacity(0.3)
+                                AppColors.secondaryText(opacity: 0.3),
+                                AppColors.secondaryText(opacity: 0.1),
+                                AppColors.secondaryText(opacity: 0.3)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -61,8 +61,8 @@ struct LoadingView: View {
                     .stroke(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.9),
-                                Color.white.opacity(0.5)
+                                AppColors.secondaryText(opacity: 0.9),
+                                AppColors.secondaryText(opacity: 0.5)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -76,7 +76,7 @@ struct LoadingView: View {
             if let message = message {
                 Text(message)
                     .font(.dmMonoRegular(size: 14))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                     .multilineTextAlignment(.center)
                     .padding(.top, 4)
             }
@@ -111,7 +111,7 @@ struct FullScreenLoadingView: View {
     
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
             LoadingView(message: message, size: .large)
         }
     }
@@ -122,7 +122,7 @@ struct InlineLoadingView: View {
     let message: String?
     let color: Color
     
-    init(message: String? = nil, color: Color = .white) {
+    init(message: String? = nil, color: Color = AppColors.primaryText) {
         self.message = message
         self.color = color
     }
