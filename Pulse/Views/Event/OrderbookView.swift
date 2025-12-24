@@ -12,7 +12,6 @@ struct OrderbookView: View {
     @State private var orderbookErrorMessage: String?
     @State private var ticketConfig: OrderTicketConfig?
     
-    // Split / Merge state
     enum ViewState {
         case orderbook
         case split
@@ -25,6 +24,12 @@ struct OrderbookView: View {
     @State private var advancedSuccessMessage: String?
     @State private var showAdvancedAlert = false
     @State private var advancedAlertMessage: String?
+    @State private var orderType: OrderType = .limit
+    @State private var priceText: String = ""
+    @State private var quantityText: String = "10"
+    @State private var isSubmittingOrder = false
+    @State private var orderErrorMessage: String?
+    @State private var isBuyOrder: Bool = true
 
     init(
         eventID: UUID,
@@ -34,6 +39,10 @@ struct OrderbookView: View {
         self.eventID = eventID
         self.outcome = outcome
         _selectedSide = State(initialValue: initialSide)
+        let initialPrice = initialSide == .yes ? outcome.yes.bestAsk : outcome.no.bestAsk
+        _priceText = State(initialValue: String(Int((initialPrice * 100).rounded())))
+        _quantityText = State(initialValue: "10")
+        _orderType = State(initialValue: .limit)
     }
 
     private func marketId(for side: MarketSideType) -> UInt64? {
@@ -170,6 +179,14 @@ struct OrderbookView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 180)
+                .onChange(of: selectedSide) { _, _ in
+                    if orderType == .limit && !priceText.isEmpty {
+                        let initialPrice = isBuyOrder 
+                            ? (selectedSide == .yes ? outcome.yes.bestAsk : outcome.no.bestAsk)
+                            : (selectedSide == .yes ? outcome.yes.bestBid : outcome.no.bestBid)
+                        priceText = String(Int((initialPrice * 100).rounded()))
+                    }
+                }
             }
         }
     }
@@ -369,55 +386,132 @@ struct OrderbookView: View {
     private var actionButtons: some View {
         VStack(spacing: 10) {
             let canSplitMerge = hasBothMarkets
+            
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Order Type")
+                        .font(.dmMonoRegular(size: 13))
+                        .foregroundColor(AppColors.secondaryText(opacity: 0.75))
+                    Picker("", selection: $orderType) {
+                        Text("Limit").tag(OrderType.limit)
+                        Text("Market").tag(OrderType.market)
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: orderType) { _, newType in
+                        if newType == .market {
+                            priceText = ""
+                        } else if priceText.isEmpty {
+                            let initialPrice = isBuyOrder 
+                                ? (selectedSide == .yes ? outcome.yes.bestAsk : outcome.no.bestAsk)
+                                : (selectedSide == .yes ? outcome.yes.bestBid : outcome.no.bestBid)
+                            priceText = String(Int((initialPrice * 100).rounded()))
+                        }
+                    }
+                }
+                
+                if orderType == .limit {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Price (%)")
+                            .font(.dmMonoRegular(size: 13))
+                            .foregroundColor(AppColors.secondaryText(opacity: 0.75))
+                        TextField("Price", text: $priceText)
+                            .keyboardType(.numberPad)
+                            .font(.dmMonoMedium(size: 16))
+                            .foregroundColor(AppColors.primaryText)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 12)
+                            .background(AppColors.cardBackground(opacity: 0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Quantity")
+                        .font(.dmMonoRegular(size: 13))
+                        .foregroundColor(AppColors.secondaryText(opacity: 0.75))
+                    TextField("Quantity", text: $quantityText)
+                        .keyboardType(.numberPad)
+                        .font(.dmMonoMedium(size: 16))
+                        .foregroundColor(AppColors.primaryText)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 12)
+                        .background(AppColors.cardBackground(opacity: 0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                
+                if let orderErrorMessage {
+                    Text(orderErrorMessage)
+                        .font(.dmMonoRegular(size: 12))
+                        .foregroundColor(.red)
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: orderType)
+            
             HStack(spacing: 10) {
                 Button {
-                    let initialPrice = selectedSide == .yes ? outcome.yes.bestAsk : outcome.no.bestAsk
-                    ticketConfig = OrderTicketConfig(
-                        outcome: outcome,
-                        side: selectedSide,
-                        isBuy: true,
-                        initialPrice: initialPrice
-                    )
+                    isBuyOrder = true
+                    if orderType == .limit {
+                        let initialPrice = selectedSide == .yes ? outcome.yes.bestAsk : outcome.no.bestAsk
+                        priceText = String(Int((initialPrice * 100).rounded()))
+                    }
+                    Task {
+                        await handlePlaceOrder(isBuy: true)
+                    }
                 } label: {
-                    Text(selectedSide == .yes ? "Buy Yes" : "Buy No")
-                        .font(.dmMonoMedium(size: 15))
-                        .foregroundColor(.green)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.green.opacity(0.22))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(Color.green.opacity(0.35), lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    HStack {
+                        if isSubmittingOrder && isBuyOrder {
+                            InlineLoadingView(color: Color.white)
+                                .frame(width: 16, height: 16)
+                        }
+                        Text(isSubmittingOrder && isBuyOrder ? "Placing..." : (selectedSide == .yes ? "Buy Yes" : "Buy No"))
+                            .font(.dmMonoMedium(size: 15))
+                    }
+                    .foregroundColor(.green)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.green.opacity(0.22))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.green.opacity(0.35), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .disabled(marketId(for: selectedSide) == nil)
+                .disabled(marketId(for: selectedSide) == nil || isSubmittingOrder)
                 .opacity(marketId(for: selectedSide) == nil ? 0.4 : 1)
 
                 Button {
-                    let initialPrice = selectedSide == .yes ? outcome.yes.bestBid : outcome.no.bestBid
-                    ticketConfig = OrderTicketConfig(
-                        outcome: outcome,
-                        side: selectedSide,
-                        isBuy: false,
-                        initialPrice: initialPrice
-                    )
+                    isBuyOrder = false
+                    if orderType == .limit {
+                        let initialPrice = selectedSide == .yes ? outcome.yes.bestBid : outcome.no.bestBid
+                        priceText = String(Int((initialPrice * 100).rounded()))
+                    }
+                    Task {
+                        await handlePlaceOrder(isBuy: false)
+                    }
                 } label: {
-                    Text(selectedSide == .yes ? "Sell Yes" : "Sell No")
-                        .font(.dmMonoMedium(size: 15))
-                        .foregroundColor(.red)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.red.opacity(0.22))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(Color.red.opacity(0.35), lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    HStack {
+                        if isSubmittingOrder && !isBuyOrder {
+                            InlineLoadingView(color: Color.white)
+                                .frame(width: 16, height: 16)
+                        }
+                        Text(isSubmittingOrder && !isBuyOrder ? "Placing..." : (selectedSide == .yes ? "Sell Yes" : "Sell No"))
+                            .font(.dmMonoMedium(size: 15))
+                    }
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.red.opacity(0.22))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.red.opacity(0.35), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .disabled(marketId(for: selectedSide) == nil)
+                .disabled(marketId(for: selectedSide) == nil || isSubmittingOrder)
                 .opacity(marketId(for: selectedSide) == nil ? 0.4 : 1)
             }
             
@@ -481,16 +575,70 @@ struct OrderbookView: View {
             }
             .padding(.top, 2)
         }
-        .sheet(item: $ticketConfig) { config in
-            OrderTicketView(
-                config: config,
-                handleDismiss: {
-                    ticketConfig = nil
+    }
+    
+    private func handlePlaceOrder(isBuy: Bool) async {
+        guard let marketId = marketId(for: selectedSide) else {
+            await MainActor.run {
+                orderErrorMessage = "Trading is unavailable for this market."
+            }
+            return
+        }
+        
+        let quantityTrimmed = quantityText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let quantityValue = UInt64(quantityTrimmed), quantityValue > 0 else {
+            await MainActor.run {
+                orderErrorMessage = "Enter a valid positive quantity."
+            }
+            return
+        }
+        
+        var priceValue: UInt64?
+        if orderType == .limit {
+            let priceTrimmed = priceText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let priceInt = Int(priceTrimmed), priceInt > 0, priceInt <= 100 else {
+                await MainActor.run {
+                    orderErrorMessage = "Enter a valid price between 1 and 100."
                 }
-            )
-            .presentationDetents([.fraction(0.55), .large])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(AppColors.background)
+                return
+            }
+            priceValue = UInt64(priceInt)
+        }
+        
+        let side: OrderSide = isBuy ? .bid : .ask
+        let request = PlaceOrderRequest(
+            marketId: marketId,
+            side: side,
+            orderType: orderType,
+            price: priceValue,
+            quantity: quantityValue
+        )
+        
+        await MainActor.run {
+            isSubmittingOrder = true
+            orderErrorMessage = nil
+        }
+        
+        do {
+            _ = try await OrderService.shared.placeOrder(request)
+            await MainActor.run {
+                isSubmittingOrder = false
+                quantityText = "10"
+                if orderType == .limit {
+                    let initialPrice = isBuy 
+                        ? (selectedSide == .yes ? outcome.yes.bestAsk : outcome.no.bestAsk)
+                        : (selectedSide == .yes ? outcome.yes.bestBid : outcome.no.bestBid)
+                    priceText = String(Int((initialPrice * 100).rounded()))
+                } else {
+                    priceText = ""
+                }
+            }
+            await loadAllOrderbooks(isInitial: false)
+        } catch {
+            await MainActor.run {
+                isSubmittingOrder = false
+                orderErrorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -512,8 +660,6 @@ struct OrderbookView: View {
         }
         .buttonStyle(.plain)
     }
-    
-    // MARK: - Split / Merge Content Views
     
     private var splitContent: some View {
         VStack(spacing: 16) {
@@ -676,7 +822,6 @@ struct OrderbookView: View {
                 advancedSuccessMessage = "Split submitted successfully."
                 advancedAlertMessage = advancedSuccessMessage
                 showAdvancedAlert = true
-                // Return to orderbook after a short delay
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     withAnimation {
                         currentView = .orderbook
@@ -720,7 +865,6 @@ struct OrderbookView: View {
                 advancedSuccessMessage = "Merge submitted successfully."
                 advancedAlertMessage = advancedSuccessMessage
                 showAdvancedAlert = true
-                // Return to orderbook after a short delay
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     withAnimation {
                         currentView = .orderbook
