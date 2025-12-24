@@ -5,7 +5,6 @@ struct EventView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showingOrderbookFor: OutcomeMarket?
-    @State private var showingTicketConfig: OrderTicketConfig?
     @State private var orderbookInitialSide: MarketSideType = .yes
 
     var body: some View {
@@ -14,9 +13,8 @@ struct EventView: View {
                 backgroundGradient(for: geo)
                 ScrollView {
                     VStack(spacing: 16) {
-                        EventTopBarView(handleDismiss: dismiss)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 10)
+                        Spacer()
+                            .frame(height: 60)
                         EventHeroImageView(
                             imageName: event.imageName,
                             imgUrl: event.imgUrl,
@@ -40,53 +38,29 @@ struct EventView: View {
                             handleOpenNoOrderbook: { outcome in
                                 orderbookInitialSide = .no
                                 showingOrderbookFor = outcome
-                            },
-                            handleOpenYesTicket: { outcome in
-                                let config = OrderTicketConfig(
-                                    outcome: outcome,
-                                    side: .yes,
-                                    isBuy: true,
-                                    initialPrice: outcome.yes.price
-                                )
-                                showingTicketConfig = config
-                            },
-                            handleOpenNoTicket: { outcome in
-                                let config = OrderTicketConfig(
-                                    outcome: outcome,
-                                    side: .no,
-                                    isBuy: true,
-                                    initialPrice: outcome.no.price
-                                )
-                                showingTicketConfig = config
                             }
                         )
                         .padding(.horizontal, 16)
                         .padding(.bottom, 24)
                     }
                 }
-                .sheet(item: $showingOrderbookFor) { outcome in
-                    OrderbookView(
-                        eventID: event.id,
-                        outcome: outcome,
-                        initialSide: orderbookInitialSide
-                    )
-                        .presentationContentInteraction(.scrolls)
-                        .presentationBackgroundInteraction(.enabled)
-                        .presentationDragIndicator(.visible)
-                        .presentationDetents([.fraction(0.8), .large])
-                        .presentationBackground(AppColors.background)
-                }
-                .sheet(item: $showingTicketConfig) { config in
-                    OrderTicketView(
-                        config: config,
-                        handleDismiss: {
-                            showingTicketConfig = nil
-                        }
-                    )
-                    .presentationDetents([.fraction(0.55), .large])
+            }
+            .overlay(alignment: .topLeading) {
+                EventTopBarView(handleDismiss: dismiss)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+            }
+            .sheet(item: $showingOrderbookFor) { outcome in
+                OrderbookView(
+                    eventID: event.id,
+                    outcome: outcome,
+                    initialSide: orderbookInitialSide
+                )
+                    .presentationContentInteraction(.scrolls)
+                    .presentationBackgroundInteraction(.enabled)
                     .presentationDragIndicator(.visible)
+                    .presentationDetents([.fraction(0.95), .large])
                     .presentationBackground(AppColors.background)
-                }
             }
         }
         .navigationBarBackButtonHidden(true)

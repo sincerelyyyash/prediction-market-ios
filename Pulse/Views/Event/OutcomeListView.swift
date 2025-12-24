@@ -5,8 +5,6 @@ struct OutcomeListView: View {
     let handleOpenOrderbook: (OutcomeMarket) -> Void
     let handleOpenYesOrderbook: (OutcomeMarket) -> Void
     let handleOpenNoOrderbook: (OutcomeMarket) -> Void
-    let handleOpenYesTicket: (OutcomeMarket) -> Void
-    let handleOpenNoTicket: (OutcomeMarket) -> Void
 
     var body: some View {
         LazyVStack(spacing: 10) {
@@ -14,10 +12,10 @@ struct OutcomeListView: View {
                 OutcomeRowView(
                     outcome: outcome,
                     handleBuyYes: {
-                        handleOpenYesTicket(outcome)
+                        handleOpenYesOrderbook(outcome)
                     },
                     handleBuyNo: {
-                        handleOpenNoTicket(outcome)
+                        handleOpenNoOrderbook(outcome)
                     },
                     handleOpenOrderbook: {
                         handleOpenOrderbook(outcome)
