@@ -13,8 +13,12 @@ struct OrderbookView: View {
     @State private var ticketConfig: OrderTicketConfig?
     
     // Split / Merge state
-    @State private var showSplitSheet = false
-    @State private var showMergeSheet = false
+    enum ViewState {
+        case orderbook
+        case split
+        case merge
+    }
+    @State private var currentView: ViewState = .orderbook
     @State private var splitAmountText = ""
     @State private var isSubmittingAdvanced = false
     @State private var advancedErrorMessage: String?
@@ -58,21 +62,20 @@ struct OrderbookView: View {
     var body: some View {
         VStack(spacing: 16) {
             Color.clear.frame(height: 8)
-            header
-            levelSelector
             
-            if isLoading && !hasLoadedOnce {
-                ProgressView("Loading orderbook...")
-                    .progressViewStyle(.circular)
-                    .tint(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 40)
-            } else {
-                ladderHeader
-                ladderBody
+            ZStack {
+                if currentView == .orderbook {
+                    orderbookContent
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                } else if currentView == .split {
+                    splitContent
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                } else if currentView == .merge {
+                    mergeContent
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
             }
-            
-            actionButtons
+            .animation(.easeInOut(duration: 0.3), value: currentView)
         }
         .padding(.horizontal)
         .padding(.bottom, 8)
@@ -85,6 +88,24 @@ struct OrderbookView: View {
                 try? await Task.sleep(nanoseconds: 10_000_000_000)
                 await loadAllOrderbooks(isInitial: false)
             }
+        }
+    }
+    
+    private var orderbookContent: some View {
+        VStack(spacing: 16) {
+            header
+            levelSelector
+            
+            if isLoading && !hasLoadedOnce {
+                LoadingView(message: "Loading orderbook...", size: .medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+            } else {
+                ladderHeader
+                ladderBody
+            }
+            
+            actionButtons
         }
     }
     
@@ -149,6 +170,66 @@ struct OrderbookView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 180)
+            }
+        }
+    }
+    
+    private var splitHeader: some View {
+        HStack {
+            Button {
+                withAnimation {
+                    currentView = .orderbook
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.left")
+                        .font(.dmMonoMedium(size: 14))
+                    Text("Back")
+                        .font(.dmMonoMedium(size: 15))
+                }
+                .foregroundColor(.white.opacity(0.8))
+            }
+            .buttonStyle(.plain)
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(outcome.name)
+                    .font(.dmMonoMedium(size: 18))
+                    .foregroundColor(.white)
+                Text("Split Position")
+                    .font(.dmMonoRegular(size: 12))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+        }
+    }
+    
+    private var mergeHeader: some View {
+        HStack {
+            Button {
+                withAnimation {
+                    currentView = .orderbook
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.left")
+                        .font(.dmMonoMedium(size: 14))
+                    Text("Back")
+                        .font(.dmMonoMedium(size: 15))
+                }
+                .foregroundColor(.white.opacity(0.8))
+            }
+            .buttonStyle(.plain)
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(outcome.name)
+                    .font(.dmMonoMedium(size: 18))
+                    .foregroundColor(.white)
+                Text("Merge Positions")
+                    .font(.dmMonoRegular(size: 12))
+                    .foregroundColor(.white.opacity(0.7))
             }
         }
     }
@@ -288,7 +369,7 @@ struct OrderbookView: View {
     private var actionButtons: some View {
         VStack(spacing: 10) {
             let canSplitMerge = hasBothMarkets
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Button {
                     let initialPrice = selectedSide == .yes ? outcome.yes.bestAsk : outcome.no.bestAsk
                     ticketConfig = OrderTicketConfig(
@@ -298,17 +379,17 @@ struct OrderbookView: View {
                         initialPrice: initialPrice
                     )
                 } label: {
-                    HStack {
-                        Image(systemName: "cart.fill.badge.plus")
-                            .font(.dmMonoMedium(size: 14))
-                        Text(selectedSide == .yes ? "Buy Yes" : "Buy No")
-                            .font(.dmMonoMedium(size: 15))
-                    }
-                    .foregroundColor(selectedSide == .yes ? .black : .white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(selectedSide == .yes ? Color.green : Color.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Text(selectedSide == .yes ? "Buy Yes" : "Buy No")
+                        .font(.dmMonoMedium(size: 15))
+                        .foregroundColor(.green)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.green.opacity(0.22))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color.green.opacity(0.35), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(marketId(for: selectedSide) == nil)
@@ -323,21 +404,17 @@ struct OrderbookView: View {
                         initialPrice: initialPrice
                     )
                 } label: {
-                    HStack {
-                        Image(systemName: "arrow.uturn.down")
-                            .font(.dmMonoMedium(size: 14))
-                        Text("Sell")
-                            .font(.dmMonoMedium(size: 15))
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.white.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Text(selectedSide == .yes ? "Sell Yes" : "Sell No")
+                        .font(.dmMonoMedium(size: 15))
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.red.opacity(0.22))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color.red.opacity(0.35), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(marketId(for: selectedSide) == nil)
@@ -346,10 +423,12 @@ struct OrderbookView: View {
             
             HStack(spacing: 10) {
                 Button {
-                    advancedErrorMessage = nil
-                    advancedSuccessMessage = nil
-                    splitAmountText = ""
-                    showSplitSheet = true
+                    withAnimation {
+                        advancedErrorMessage = nil
+                        advancedSuccessMessage = nil
+                        splitAmountText = ""
+                        currentView = .split
+                    }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.triangle.branch")
@@ -373,9 +452,11 @@ struct OrderbookView: View {
                 .opacity(canSplitMerge ? 1 : 0.4)
                 
                 Button {
-                    advancedErrorMessage = nil
-                    advancedSuccessMessage = nil
-                    showMergeSheet = true
+                    withAnimation {
+                        advancedErrorMessage = nil
+                        advancedSuccessMessage = nil
+                        currentView = .merge
+                    }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "square.stack.3d.down.right")
@@ -399,12 +480,6 @@ struct OrderbookView: View {
                 .opacity(canSplitMerge ? 1 : 0.4)
             }
             .padding(.top, 2)
-        }
-        .sheet(isPresented: $showSplitSheet) {
-            splitSheet
-        }
-        .sheet(isPresented: $showMergeSheet) {
-            mergeSheet
         }
         .sheet(item: $ticketConfig) { config in
             OrderTicketView(
@@ -439,16 +514,13 @@ struct OrderbookView: View {
         .buttonStyle(.plain)
     }
     
-    // MARK: - Split / Merge Sheets
+    // MARK: - Split / Merge Content Views
     
-    private var splitSheet: some View {
-        NavigationStack {
+    private var splitContent: some View {
+        VStack(spacing: 16) {
+            splitHeader
+            
             VStack(alignment: .leading, spacing: 16) {
-                Text("Split Position")
-                    .font(.dmMonoMedium(size: 18))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                
                 Text("Allocate an amount into both the Yes and No markets for this outcome without placing new orders on the orderbook.")
                     .font(.dmMonoRegular(size: 13))
                     .foregroundColor(.white.opacity(0.7))
@@ -462,9 +534,13 @@ struct OrderbookView: View {
                         .keyboardType(.numberPad)
                         .font(.dmMonoMedium(size: 16))
                         .foregroundColor(.white)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 10)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 12)
                         .background(Color.white.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                        )
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 
@@ -483,52 +559,43 @@ struct OrderbookView: View {
                 } label: {
                     HStack {
                         if isSubmittingAdvanced {
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                                .tint(.black)
+                            InlineLoadingView()
+                                .frame(width: 16, height: 16)
                         }
                         Text(isSubmittingAdvanced ? "Splitting..." : "Confirm Split")
                             .font(.dmMonoMedium(size: 15))
                     }
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .background(Color.white)
+                    .padding(.vertical, 12)
+                    .background(Color.white.opacity(0.12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .disabled(isSubmittingAdvanced)
                 .buttonStyle(.plain)
-                
-                Spacer()
             }
-            .padding(16)
-            .background(Color.black.ignoresSafeArea())
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
-                        showSplitSheet = false
-                    }
-                    .foregroundColor(.white)
-                }
-            }
-            .alert(isPresented: $showAdvancedAlert) {
-                Alert(
-                    title: Text("Order Update"),
-                    message: Text(advancedAlertMessage ?? ""),
-                    dismissButton: .default(Text("OK"))
-                )
-            }
+            .padding(.top, 8)
+            
+            Spacer()
+        }
+        .alert(isPresented: $showAdvancedAlert) {
+            Alert(
+                title: Text("Order Update"),
+                message: Text(advancedAlertMessage ?? ""),
+                dismissButton: .default(Text("OK"))
+            )
         }
     }
     
-    private var mergeSheet: some View {
-        NavigationStack {
+    private var mergeContent: some View {
+        VStack(spacing: 16) {
+            mergeHeader
+            
             VStack(alignment: .leading, spacing: 16) {
-                Text("Merge Positions")
-                    .font(.dmMonoMedium(size: 18))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                
                 Text("Combine your exposure between the Yes and No markets for this outcome into a cleaner net position using your existing holdings.")
                     .font(.dmMonoRegular(size: 13))
                     .foregroundColor(.white.opacity(0.7))
@@ -549,34 +616,28 @@ struct OrderbookView: View {
                 } label: {
                     HStack {
                         if isSubmittingAdvanced {
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                                .tint(.black)
+                            InlineLoadingView()
+                                .frame(width: 16, height: 16)
                         }
                         Text(isSubmittingAdvanced ? "Merging..." : "Confirm Merge")
                             .font(.dmMonoMedium(size: 15))
                     }
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .background(Color.white)
+                    .padding(.vertical, 12)
+                    .background(Color.white.opacity(0.12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .disabled(isSubmittingAdvanced)
                 .buttonStyle(.plain)
-                
-                Spacer()
             }
-            .padding(16)
-            .background(Color.black.ignoresSafeArea())
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
-                        showMergeSheet = false
-                    }
-                    .foregroundColor(.white)
-                }
-            }
+            .padding(.top, 8)
+            
+            Spacer()
         }
     }
     
@@ -616,6 +677,13 @@ struct OrderbookView: View {
                 advancedSuccessMessage = "Split submitted successfully."
                 advancedAlertMessage = advancedSuccessMessage
                 showAdvancedAlert = true
+                // Return to orderbook after a short delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation {
+                        currentView = .orderbook
+                        splitAmountText = ""
+                    }
+                }
             }
         } catch {
             await MainActor.run {
@@ -653,6 +721,12 @@ struct OrderbookView: View {
                 advancedSuccessMessage = "Merge submitted successfully."
                 advancedAlertMessage = advancedSuccessMessage
                 showAdvancedAlert = true
+                // Return to orderbook after a short delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation {
+                        currentView = .orderbook
+                    }
+                }
             }
         } catch {
             await MainActor.run {
