@@ -58,6 +58,17 @@ final class NetworkClient {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain {
+                switch nsError.code {
+                case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
+                    throw APIError.noInternetConnection
+                case NSURLErrorTimedOut, NSURLErrorCannotFindHost, NSURLErrorCannotConnectToHost:
+                    throw APIError.serverUnavailable
+                default:
+                    throw APIError.network(error)
+                }
+            }
             throw APIError.network(error)
         }
 
@@ -70,6 +81,9 @@ final class NetworkClient {
                 throw APIError.authenticationRequired
             }
             let message = parseErrorMessage(from: data)
+            if httpResponse.statusCode >= 500 {
+                throw APIError.serverUnavailable
+            }
             throw APIError.server(statusCode: httpResponse.statusCode, message: message)
         }
 
@@ -103,8 +117,6 @@ final class NetworkClient {
         } catch {
             throw APIError.network(error)
         }
-        // Explicitly call the base send method with Data? to avoid infinite recursion
-        // (Data conforms to Encodable, so without explicit typing it would recursively call this method)
         return try await send(
             path: path,
             method: method,
