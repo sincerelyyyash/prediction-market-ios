@@ -15,7 +15,7 @@ struct EventHeroImageView: View {
                     case .empty:
                         InlineLoadingView()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(Color.white.opacity(0.04))
+                            .background(AppColors.cardBackground(opacity: 0.04))
                     case .success(let image):
                         image
                             .resizable()
@@ -46,13 +46,13 @@ struct EventHeroImageView: View {
             // Fallback visual if even placeholder is missing
             ZStack {
                 LinearGradient(
-                    colors: [Color.white.opacity(0.08), Color.white.opacity(0.02)],
+                    colors: [AppColors.cardBackground(opacity: 0.08), AppColors.cardBackground(opacity: 0.02)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 Image(systemName: "photo")
                     .font(.system(size: 28, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.6))
             }
         }
     }

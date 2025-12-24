@@ -19,7 +19,7 @@ struct OutcomeRowView: View {
             OutcomeIconView(imgUrl: outcome.imgUrl, size: 40)
             Text(outcome.name)
                 .font(.dmMonoMedium(size: 15))
-                .foregroundColor(.white)
+                .foregroundColor(AppColors.primaryText)
                 .lineLimit(1)
             Spacer(minLength: 8)
             CompactActionButton(
@@ -40,10 +40,10 @@ struct OutcomeRowView: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(AppColors.cardBackground(opacity: 0.06))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        .stroke(AppColors.border(opacity: 0.12), lineWidth: 1)
                 )
         )
         .contentShape(Rectangle())

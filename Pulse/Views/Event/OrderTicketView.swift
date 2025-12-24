@@ -47,7 +47,7 @@ struct OrderTicketView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(config.outcome.name)
                         .font(.dmMonoMedium(size: 18))
-                        .foregroundColor(.white)
+                        .foregroundColor(AppColors.primaryText)
                     Text(titleText)
                         .font(.dmMonoRegular(size: 13))
                         .foregroundColor(marketColor)
@@ -56,7 +56,7 @@ struct OrderTicketView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Order Type")
                         .font(.dmMonoRegular(size: 13))
-                        .foregroundColor(.white.opacity(0.75))
+                        .foregroundColor(AppColors.secondaryText(opacity: 0.75))
                     Picker("", selection: $orderType) {
                         Text("Limit").tag(OrderType.limit)
                         Text("Market").tag(OrderType.market)
@@ -68,14 +68,14 @@ struct OrderTicketView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Price (%)")
                             .font(.dmMonoRegular(size: 13))
-                            .foregroundColor(.white.opacity(0.75))
+                            .foregroundColor(AppColors.secondaryText(opacity: 0.75))
                         TextField("Price", text: $priceText)
                             .keyboardType(.numberPad)
                             .font(.dmMonoMedium(size: 16))
-                            .foregroundColor(.white)
+                            .foregroundColor(AppColors.primaryText)
                             .padding(.vertical, 8)
                             .padding(.horizontal, 10)
-                            .background(Color.white.opacity(0.08))
+                            .background(AppColors.cardBackground(opacity: 0.08))
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
                 }
@@ -83,14 +83,14 @@ struct OrderTicketView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Quantity")
                         .font(.dmMonoRegular(size: 13))
-                        .foregroundColor(.white.opacity(0.75))
+                        .foregroundColor(AppColors.secondaryText(opacity: 0.75))
                     TextField("Quantity", text: $quantityText)
                         .keyboardType(.numberPad)
                         .font(.dmMonoMedium(size: 16))
-                        .foregroundColor(.white)
+                        .foregroundColor(AppColors.primaryText)
                         .padding(.vertical, 8)
                         .padding(.horizontal, 10)
-                        .background(Color.white.opacity(0.08))
+                        .background(AppColors.cardBackground(opacity: 0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
 
@@ -107,12 +107,12 @@ struct OrderTicketView: View {
                 } label: {
                     HStack {
                         if isSubmitting {
-                            InlineLoadingView(color: .black)
+                            InlineLoadingView(color: AppColors.background)
                         }
                         Text(isSubmitting ? "Placing Order..." : "Place Order")
                             .font(.dmMonoMedium(size: 15))
                     }
-                    .foregroundColor(.black)
+                    .foregroundColor(AppColors.background)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
                     .background(marketColor)
@@ -124,13 +124,13 @@ struct OrderTicketView: View {
                 Spacer()
             }
             .padding(16)
-            .background(Color.black.ignoresSafeArea())
+            .background(AppColors.background.ignoresSafeArea())
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") {
                         handleDismiss()
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                 }
             }
         }

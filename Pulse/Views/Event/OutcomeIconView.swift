@@ -41,14 +41,14 @@ struct OutcomeIconView: View {
             Circle()
                 .fill(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.12), Color.white.opacity(0.06)],
+                        colors: [AppColors.cardBackground(opacity: 0.12), AppColors.cardBackground(opacity: 0.06)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
             Image(systemName: "person.circle.fill")
                 .font(.system(size: size * 0.6, weight: .medium))
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.6))
         }
     }
 }

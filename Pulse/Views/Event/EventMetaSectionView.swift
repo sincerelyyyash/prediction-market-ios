@@ -11,12 +11,12 @@ struct EventMetaSectionView: View {
             }
             Text(event.title)
                 .font(.dmMonoMedium(size: 22))
-                .foregroundColor(.white)
+                .foregroundColor(AppColors.primaryText)
                 .lineLimit(3)
             if let subtitle = event.subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.dmMonoRegular(size: 14))
-                    .foregroundColor(.white.opacity(0.9))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.9))
                     .lineLimit(2)
             }
         }

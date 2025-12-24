@@ -12,9 +12,9 @@ struct EventTopBarView: View {
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.dmMonoMedium(size: 17))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                     .padding(10)
-                    .background(Color.white.opacity(0.08))
+                    .background(AppColors.cardBackground(opacity: 0.08))
                     .clipShape(Circle())
             }
             Spacer()

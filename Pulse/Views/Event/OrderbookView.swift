@@ -80,7 +80,7 @@ struct OrderbookView: View {
         .padding(.horizontal)
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity, alignment: .top)
-        .background(Color.black)
+        .background(AppColors.background)
         .ignoresSafeArea()
         .task {
             await loadAllOrderbooks(isInitial: true)
@@ -153,16 +153,16 @@ struct OrderbookView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(outcome.name)
                     .font(.dmMonoMedium(size: 18))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                 Text("Orderbook")
                     .font(.dmMonoRegular(size: 12))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 6) {
                 Text("Side")
                     .font(.dmMonoRegular(size: 11))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 Picker("", selection: $selectedSide) {
                     Text("Yes").tag(MarketSideType.yes)
@@ -187,7 +187,7 @@ struct OrderbookView: View {
                     Text("Back")
                         .font(.dmMonoMedium(size: 15))
                 }
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.8))
             }
             .buttonStyle(.plain)
             
@@ -196,10 +196,10 @@ struct OrderbookView: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text(outcome.name)
                     .font(.dmMonoMedium(size: 18))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                 Text("Split Position")
                     .font(.dmMonoRegular(size: 12))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
             }
         }
     }
@@ -217,7 +217,7 @@ struct OrderbookView: View {
                     Text("Back")
                         .font(.dmMonoMedium(size: 15))
                 }
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.8))
             }
             .buttonStyle(.plain)
             
@@ -226,10 +226,10 @@ struct OrderbookView: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text(outcome.name)
                     .font(.dmMonoMedium(size: 18))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                 Text("Merge Positions")
                     .font(.dmMonoRegular(size: 12))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
             }
         }
     }
@@ -238,7 +238,7 @@ struct OrderbookView: View {
         HStack(spacing: 8) {
             Text("Levels")
                 .font(.dmMonoRegular(size: 12))
-                .foregroundColor(.white.opacity(0.75))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.75))
             levelButton(10)
             levelButton(20)
             levelButton(50)
@@ -254,7 +254,7 @@ struct OrderbookView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text("Price")
                 .font(.dmMonoRegular(size: 11))
-                .foregroundColor(.white.opacity(0.85))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.85))
                 .frame(width: 70)
             Text("Asks (Qty)")
                 .font(.dmMonoRegular(size: 11))
@@ -263,11 +263,11 @@ struct OrderbookView: View {
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 6)
-        .background(Color.white.opacity(0.06))
+        .background(AppColors.cardBackground(opacity: 0.06))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                .stroke(AppColors.border(opacity: 0.12), lineWidth: 1)
         )
     }
 
@@ -286,7 +286,7 @@ struct OrderbookView: View {
                         bidView(bid, maxQty: maxQty)
                         Text(centerPriceText(bid: bid?.price, ask: ask?.price))
                             .font(.dmMonoMedium(size: 12))
-                            .foregroundColor(.white)
+                            .foregroundColor(AppColors.primaryText)
                             .frame(width: 70)
                         askView(ask, maxQty: maxQty)
                     }
@@ -296,7 +296,7 @@ struct OrderbookView: View {
                     if let orderbookErrorMessage {
                         Text(orderbookErrorMessage)
                             .font(.dmMonoRegular(size: 13))
-                            .foregroundColor(.white.opacity(0.85))
+                            .foregroundColor(AppColors.secondaryText(opacity: 0.85))
                             .multilineTextAlignment(.center)
                         Button {
                             Task {
@@ -309,10 +309,10 @@ struct OrderbookView: View {
                     } else {
                         Text("No orders in the orderbook yet")
                             .font(.dmMonoRegular(size: 13))
-                            .foregroundColor(.white.opacity(0.75))
+                            .foregroundColor(AppColors.secondaryText(opacity: 0.75))
                         Text("You can still use Split and Merge below to rebalance existing positions.")
                             .font(.dmMonoRegular(size: 11))
-                            .foregroundColor(.white.opacity(0.5))
+                            .foregroundColor(AppColors.secondaryText(opacity: 0.5))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -322,7 +322,7 @@ struct OrderbookView: View {
         .frame(maxWidth: .infinity, alignment: .top)
         .frame(minHeight: 260, alignment: .top)
         .padding(8)
-        .background(Color.white.opacity(0.04))
+        .background(AppColors.cardBackground(opacity: 0.04))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
@@ -436,13 +436,13 @@ struct OrderbookView: View {
                         Text("Split")
                             .font(.dmMonoMedium(size: 13))
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity)
-                    .background(Color.white.opacity(0.06))
+                    .background(AppColors.cardBackground(opacity: 0.06))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                            .stroke(AppColors.border(opacity: 0.14), lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
@@ -464,13 +464,13 @@ struct OrderbookView: View {
                         Text("Merge")
                             .font(.dmMonoMedium(size: 13))
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity)
-                    .background(Color.white.opacity(0.06))
+                    .background(AppColors.cardBackground(opacity: 0.06))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                            .stroke(AppColors.border(opacity: 0.14), lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
@@ -488,10 +488,9 @@ struct OrderbookView: View {
                     ticketConfig = nil
                 }
             )
-            .preferredColorScheme(.dark)
             .presentationDetents([.fraction(0.55), .large])
             .presentationDragIndicator(.visible)
-            .presentationBackground(.black)
+            .presentationBackground(AppColors.background)
         }
     }
 
@@ -501,13 +500,13 @@ struct OrderbookView: View {
         } label: {
             Text("\(count)")
                 .font(.dmMonoMedium(size: 12))
-                .foregroundColor(.white)
+                .foregroundColor(AppColors.primaryText)
                 .padding(.vertical, 6)
                 .padding(.horizontal, 10)
-                .background(count == levelCount ? Color.white.opacity(0.16) : Color.white.opacity(0.08))
+                .background(count == levelCount ? AppColors.cardBackground(opacity: 0.16) : AppColors.cardBackground(opacity: 0.08))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Color.white.opacity(count == levelCount ? 0.0 : 0.14), lineWidth: 1)
+                        .stroke(AppColors.border(opacity: count == levelCount ? 0.0 : 0.14), lineWidth: 1)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
@@ -523,23 +522,23 @@ struct OrderbookView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Allocate an amount into both the Yes and No markets for this outcome without placing new orders on the orderbook.")
                     .font(.dmMonoRegular(size: 13))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                     .fixedSize(horizontal: false, vertical: true)
                 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Amount")
                         .font(.dmMonoRegular(size: 13))
-                        .foregroundColor(.white.opacity(0.75))
+                        .foregroundColor(AppColors.secondaryText(opacity: 0.75))
                     TextField("Quantity", text: $splitAmountText)
                         .keyboardType(.numberPad)
                         .font(.dmMonoMedium(size: 16))
-                        .foregroundColor(.white)
+                        .foregroundColor(AppColors.primaryText)
                         .padding(.vertical, 12)
                         .padding(.horizontal, 12)
-                        .background(Color.white.opacity(0.08))
+                        .background(AppColors.cardBackground(opacity: 0.08))
                         .overlay(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                                .stroke(AppColors.border(opacity: 0.14), lineWidth: 1)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
@@ -565,13 +564,13 @@ struct OrderbookView: View {
                         Text(isSubmittingAdvanced ? "Splitting..." : "Confirm Split")
                             .font(.dmMonoMedium(size: 15))
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Color.white.opacity(0.12))
+                    .background(AppColors.cardBackground(opacity: 0.12))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            .stroke(AppColors.border(opacity: 0.2), lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
@@ -598,7 +597,7 @@ struct OrderbookView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Combine your exposure between the Yes and No markets for this outcome into a cleaner net position using your existing holdings.")
                     .font(.dmMonoRegular(size: 13))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppColors.secondaryText(opacity: 0.7))
                     .fixedSize(horizontal: false, vertical: true)
                 
                 if let advancedErrorMessage {
@@ -622,13 +621,13 @@ struct OrderbookView: View {
                         Text(isSubmittingAdvanced ? "Merging..." : "Confirm Merge")
                             .font(.dmMonoMedium(size: 15))
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.primaryText)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Color.white.opacity(0.12))
+                    .background(AppColors.cardBackground(opacity: 0.12))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            .stroke(AppColors.border(opacity: 0.2), lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }

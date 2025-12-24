@@ -70,12 +70,11 @@ struct EventView: View {
                         outcome: outcome,
                         initialSide: orderbookInitialSide
                     )
-                        .preferredColorScheme(.dark)
                         .presentationContentInteraction(.scrolls)
                         .presentationBackgroundInteraction(.enabled)
                         .presentationDragIndicator(.visible)
                         .presentationDetents([.fraction(0.8), .large])
-                        .presentationBackground(.black)
+                        .presentationBackground(AppColors.background)
                 }
                 .sheet(item: $showingTicketConfig) { config in
                     OrderTicketView(
@@ -84,10 +83,9 @@ struct EventView: View {
                             showingTicketConfig = nil
                         }
                     )
-                    .preferredColorScheme(.dark)
                     .presentationDetents([.fraction(0.55), .large])
                     .presentationDragIndicator(.visible)
-                    .presentationBackground(.black)
+                    .presentationBackground(AppColors.background)
                 }
             }
         }
@@ -97,12 +95,12 @@ struct EventView: View {
 
     private func backgroundGradient(for geo: GeometryProxy) -> some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
             RadialGradient(
                 gradient: Gradient(stops: [
-                    .init(color: .white, location: 0.0),
-                    .init(color: Color(red: 0.7, green: 0.7, blue: 0.75), location: 0.0),
-                    .init(color: .black, location: 0.4)
+                    .init(color: AppColors.gradientStart, location: 0.0),
+                    .init(color: AppColors.gradientMiddle, location: 0.15),
+                    .init(color: AppColors.gradientEnd, location: 0.4)
                 ]),
                 center: .top,
                 startRadius: 0,
@@ -117,5 +115,4 @@ struct EventView: View {
 #Preview {
     let sample = Constants.placeholderEventDetails.first!
     return EventView(event: sample)
-        .preferredColorScheme(.dark)
 }
