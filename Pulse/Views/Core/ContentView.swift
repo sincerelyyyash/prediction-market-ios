@@ -7,7 +7,9 @@ struct ContentView: View {
     init() {
         let tabBarAppearance = UITabBarAppearance()
         tabBarAppearance.configureWithOpaqueBackground()
-        tabBarAppearance.backgroundColor = .black
+        tabBarAppearance.backgroundColor = UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? .black : .white
+        }
 
         UITabBar.appearance().standardAppearance = tabBarAppearance
         if #available(iOS 15.0, *) {
@@ -37,7 +39,7 @@ struct ContentView: View {
         .task {
             await performInitialDataCheck()
         }
-        .tint(.white)
+        .tint(AppColors.primaryText)
     }
 
     private func performInitialDataCheck() async {
@@ -71,14 +73,13 @@ private struct PlaceholderTab: View {
         VStack {
             Spacer()
             Text("\(title) coming soon")
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(AppColors.secondaryText(opacity: 0.6))
             Spacer()
         }
-        .background(Color.black.ignoresSafeArea())
+        .background(AppColors.background.ignoresSafeArea())
     }
 }
 
 #Preview {
     ContentView()
-        .preferredColorScheme(.dark)
 }

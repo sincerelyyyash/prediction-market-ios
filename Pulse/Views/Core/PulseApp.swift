@@ -23,11 +23,9 @@ private struct RootView: View {
         ZStack {
             if authService.isAuthenticated {
                 ContentView()
-                    .preferredColorScheme(.dark)
                     .transition(.fadeTransition)
             } else {
                 OnboardingView()
-                    .preferredColorScheme(.dark)
                     .transition(.fadeTransition)
             }
         }
