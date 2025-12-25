@@ -65,12 +65,21 @@ final class AuthService: ObservableObject {
         guard session == nil, tokenManager.isAuthenticated() else { return }
 
         if let stored = loadStoredSession() {
-            session = stored
-            return
+            do {
+                _ = try await UserService.shared.getUser(by: Int64(stored.user.id))
+                session = stored
+                return
+            } catch {
+                signOut()
+                return
+            }
         }
 
         guard let token = tokenManager.accessToken,
-              let userId = decodeUserId(from: token) else { return }
+              let userId = decodeUserId(from: token) else {
+            signOut()
+            return
+        }
 
         do {
             let profile = try await UserService.shared.getUser(by: Int64(userId))
@@ -84,6 +93,7 @@ final class AuthService: ObservableObject {
             session = rebuilt
             persistSession(rebuilt)
         } catch {
+            signOut()
         }
     }
 

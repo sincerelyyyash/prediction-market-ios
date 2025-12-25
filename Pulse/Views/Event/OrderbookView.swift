@@ -34,15 +34,18 @@ struct OrderbookView: View {
     init(
         eventID: UUID,
         outcome: OutcomeMarket,
-        initialSide: MarketSideType = .yes
+        initialSide: MarketSideType = .yes,
+        prefillQuantity: Int64? = nil,
+        prefillAsSell: Bool = false
     ) {
         self.eventID = eventID
         self.outcome = outcome
         _selectedSide = State(initialValue: initialSide)
-        let initialPrice = initialSide == .yes ? outcome.yes.bestAsk : outcome.no.bestAsk
+        let initialPrice = initialSide == .yes ? outcome.yes.bestBid : outcome.no.bestBid
         _priceText = State(initialValue: String(Int((initialPrice * 100).rounded())))
-        _quantityText = State(initialValue: "10")
+        _quantityText = State(initialValue: prefillQuantity.map { String($0) } ?? "10")
         _orderType = State(initialValue: .limit)
+        _isBuyOrder = State(initialValue: !prefillAsSell)
     }
 
     private func marketId(for side: MarketSideType) -> UInt64? {
@@ -91,6 +94,15 @@ struct OrderbookView: View {
         .frame(maxWidth: .infinity, alignment: .top)
         .background(AppColors.background)
         .ignoresSafeArea()
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    hideKeyboard()
+                }
+                .foregroundColor(AppColors.primaryText)
+            }
+        }
         .task {
             await loadAllOrderbooks(isInitial: true)
             while !Task.isCancelled {
@@ -98,6 +110,10 @@ struct OrderbookView: View {
                 await loadAllOrderbooks(isInitial: false)
             }
         }
+    }
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
     private var orderbookContent: some View {

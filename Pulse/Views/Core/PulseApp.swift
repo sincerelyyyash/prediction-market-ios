@@ -15,10 +15,17 @@ private struct RootView: View {
     @StateObject private var errorHandler = ErrorHandler.shared
     @State private var showNetworkError = false
     @State private var networkErrorMessage = ""
+    @State private var isCheckingAuth = true
     
     var body: some View {
         ZStack {
-            if authService.isAuthenticated {
+            if isCheckingAuth {
+                ZStack {
+                    AppColors.background.ignoresSafeArea()
+                    ProgressView()
+                        .tint(AppColors.primaryText)
+                }
+            } else if authService.session != nil {
                 ContentView()
                     .transition(.fadeTransition)
             } else {
@@ -38,7 +45,8 @@ private struct RootView: View {
                 .zIndex(1000)
             }
         }
-        .animation(.fadeTransition, value: authService.isAuthenticated)
+        .animation(.fadeTransition, value: authService.session != nil)
+        .animation(.fadeTransition, value: isCheckingAuth)
         .onChange(of: networkMonitor.isConnected) { _, isConnected in
             if !isConnected {
                 networkErrorMessage = "No internet connection"
@@ -58,6 +66,9 @@ private struct RootView: View {
         }
         .task {
             await authService.restoreSessionIfNeeded()
+            await MainActor.run {
+                isCheckingAuth = false
+            }
             await checkNetworkStatus()
         }
     }

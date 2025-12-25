@@ -21,9 +21,15 @@ struct ProfileView: View {
                     backgroundGradient(for: geo)
                     VStack(spacing: 0) {
                         Spacer(minLength: 8)
-                        header
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 6)
+                        if !requiresAuth {
+                            header
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 6)
+                        } else {
+                            simpleHeader
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 6)
+                        }
                         content
                     }
                 }
@@ -43,6 +49,13 @@ struct ProfileView: View {
         }
     }
 
+    private var simpleHeader: some View {
+        PageIntroHeader(
+            title: "Profile",
+            subtitle: "Manage your account and preferences"
+        )
+    }
+    
     private var header: some View {
         VStack(alignment: .leading, spacing: 12) {
             PageIntroHeader(
@@ -331,9 +344,10 @@ struct ProfileView: View {
     }
 
     private func loadProfileFast() async {
-        if !TokenManager.shared.isAuthenticated() {
+        guard let userId = authService.session?.user.id else {
             await MainActor.run {
-                AuthService.shared.signOut()
+                isLoading = false
+                requiresAuth = true
             }
             return
         }
@@ -344,22 +358,12 @@ struct ProfileView: View {
             requiresAuth = false
         }
 
-        await authService.restoreSessionIfNeeded()
         if let sessionUser = authService.session?.user {
             await MainActor.run {
                 userProfile = UserProfile(id: sessionUser.id, email: sessionUser.email, name: sessionUser.name, balance: sessionUser.balance)
                 memberSince = "Member since \(Calendar.current.component(.year, from: Date()))"
             }
         }
-
-        guard let userId = authService.session?.user.id else {
-            await MainActor.run {
-                isLoading = false
-                requiresAuth = true
-            }
-            return
-        }
-
 
         do {
             async let profileTask = UserService.shared.getUser(by: Int64(userId))
@@ -378,8 +382,8 @@ struct ProfileView: View {
             await MainActor.run {
                 isLoading = false
                 let message = error.localizedDescription
-                if message.lowercased().contains("jwt secret") {
-                    errorMessage = "Something went wrong while loading your profile. Please try again later."
+                if message.lowercased().contains("jwt") || message.lowercased().contains("unauthorized") {
+                    errorMessage = "Session expired. Please sign in again."
                 } else {
                     errorMessage = message
                 }

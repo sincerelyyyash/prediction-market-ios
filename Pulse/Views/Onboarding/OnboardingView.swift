@@ -8,15 +8,9 @@ struct OnboardingView: View {
 
     @State private var glow = false
     @State private var path: [AuthRoute] = []
-    @State private var showApp = false
 
     var body: some View {
-        ZStack {
-            if showApp {
-                ContentView()
-                    .transition(.fadeTransition)
-            } else {
-                NavigationStack(path: $path) {
+        NavigationStack(path: $path) {
                     GeometryReader { geo in
                         ZStack {
                             BackgroundGradientView(maxDimension: max(geo.size.width, geo.size.height))
@@ -58,10 +52,6 @@ struct OnboardingView: View {
                         }
                     }
                 }
-                .transition(.fadeTransition)
-            }
-        }
-        .animation(.slideTransition, value: showApp)
     }
 
     private func handleStartTrading() {
@@ -98,10 +88,6 @@ struct OnboardingView: View {
     }
 
     private func handleAuthSuccess() {
-        withAnimation(.fadeTransition) {
-            path.removeAll()
-            showApp = true
-        }
     }
 }
 

@@ -7,9 +7,6 @@ struct EventCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if let imgUrl = event.imgUrl, let url = URL(string: imgUrl) {
-                thumbnailImage(url: url)
-            }
             header
             titleSection
             statusSection
@@ -24,31 +21,6 @@ struct EventCardView: View {
                         .stroke(AppColors.border(opacity: 0.12), lineWidth: 1)
                 )
         )
-    }
-
-    @ViewBuilder
-    private func thumbnailImage(url: URL) -> some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .empty:
-                AppColors.cardBackground(opacity: 0.04)
-                    .frame(height: 100)
-                    .overlay(
-                        InlineLoadingView()
-                    )
-            case .success(let image):
-                image
-                    .resizable()
-                    .scaledToFill()
-                    .frame(height: 100)
-                    .clipped()
-            case .failure:
-                EmptyView()
-            @unknown default:
-                EmptyView()
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var header: some View {

@@ -106,6 +106,7 @@ struct PortfolioView: View {
     @State private var errorMessage: String?
     @State private var requiresAuth = false
     @StateObject private var authService = AuthService.shared
+    @State private var showingOrderbookFor: (outcome: OutcomeMarket, side: MarketSideType, quantity: Int64)?
 
     private var pendingOrders: [Order] {
         openOrders.filter { !$0.isFilled }
@@ -122,10 +123,16 @@ struct PortfolioView: View {
                     backgroundGradient(for: geo)
                     VStack(spacing: 0) {
                         Spacer(minLength: 8)
-                        header
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 6)
-                    contentBody
+                        if !requiresAuth {
+                            header
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 6)
+                        } else {
+                            simpleHeader
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 6)
+                        }
+                        contentBody
                     }
                 }
             }
@@ -145,6 +152,34 @@ struct PortfolioView: View {
         .refreshable {
             await loadPortfolioData()
         }
+        .sheet(item: Binding(
+            get: { showingOrderbookFor.map { OrderbookSheetData(outcome: $0.outcome, side: $0.side, quantity: $0.quantity) } },
+            set: { showingOrderbookFor = $0.map { ($0.outcome, $0.side, $0.quantity) } }
+        )) { data in
+            if let eventUUID = marketMeta.values.first(where: { meta in
+                meta.outcome?.id == data.outcome.id
+            })?.eventUUID {
+                OrderbookView(
+                    eventID: eventUUID,
+                    outcome: data.outcome,
+                    initialSide: data.side,
+                    prefillQuantity: data.quantity,
+                    prefillAsSell: true
+                )
+                .presentationContentInteraction(.scrolls)
+                .presentationBackgroundInteraction(.enabled)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.fraction(0.95), .large])
+                .presentationBackground(AppColors.background)
+            }
+        }
+    }
+    
+    private struct OrderbookSheetData: Identifiable {
+        let id = UUID()
+        let outcome: OutcomeMarket
+        let side: MarketSideType
+        let quantity: Int64
     }
 
     private var tabFilters: some View {
@@ -182,6 +217,13 @@ struct PortfolioView: View {
         }
     }
 
+    private var simpleHeader: some View {
+        PageIntroHeader(
+            title: "Portfolio",
+            subtitle: "Track your PnL, positions, and order history"
+        )
+    }
+    
     private var header: some View {
         VStack(alignment: .leading, spacing: 12) {
             PageIntroHeader(
@@ -334,7 +376,12 @@ struct PortfolioView: View {
                                         position: position,
                                         marketName: name,
                                         marketPrice: position.marketPrice,
-                                        marketValue: position.value
+                                        marketValue: position.value,
+                                        onClose: {
+                                            if let outcome = meta?.outcome, let side = meta?.side {
+                                                showingOrderbookFor = (outcome, side, position.quantity)
+                                            }
+                                        }
                                     )
                                     .onTapGesture {
                                         if let eventUUID = meta?.eventUUID {
@@ -350,7 +397,7 @@ struct PortfolioView: View {
                                 emptyState(message: "No pending orders.")
                             } else {
                                 ForEach(pendingOrders) { order in
-                                    OrderRow(order: order)
+                                    OrderRow(order: order, marketMeta: marketMeta)
                                 }
                             }
                         case .closed:
@@ -358,7 +405,7 @@ struct PortfolioView: View {
                                 emptyState(message: "No closed orders.")
                             } else {
                                 ForEach(closedOrders) { order in
-                                    OrderRow(order: order)
+                                    OrderRow(order: order, marketMeta: marketMeta)
                                 }
                             }
                         }
@@ -379,9 +426,10 @@ struct PortfolioView: View {
     }
 
     private func loadPortfolioData() async {
-        if !TokenManager.shared.isAuthenticated() {
+        guard authService.session?.user.id != nil else {
             await MainActor.run {
-                AuthService.shared.signOut()
+                isLoading = false
+                requiresAuth = true
             }
             return
         }
@@ -390,15 +438,6 @@ struct PortfolioView: View {
             isLoading = true
             errorMessage = nil
             requiresAuth = false
-        }
-
-        await authService.restoreSessionIfNeeded()
-        guard authService.session?.user.id != nil else {
-            await MainActor.run {
-                isLoading = false
-                requiresAuth = true
-            }
-            return
         }
 
         do {
@@ -412,8 +451,8 @@ struct PortfolioView: View {
             await MainActor.run {
                 isLoading = false
                 let message = error.localizedDescription
-                if message.lowercased().contains("jwt secret") {
-                    errorMessage = "Something went wrong while loading your portfolio. Please try again later."
+                if message.lowercased().contains("jwt") || message.lowercased().contains("unauthorized") {
+                    errorMessage = "Session expired. Please sign in again."
                 } else {
                     errorMessage = message
                 }
@@ -454,12 +493,18 @@ struct PortfolioView: View {
         } else {
             totalPnLValue = 0
         }
-        if let balance = portfolio.balance, balance != 0 {
-            let balanceValue = Double(balance)
-            totalPnLPercent = (totalPnLValue / balanceValue) * 100.0
-        } else if let totalValue = portfolio.totalValue, totalValue != 0 {
-            let totalValueDouble = Double(totalValue)
-            totalPnLPercent = (totalPnLValue / totalValueDouble) * 100.0
+        
+        let balance = Double(portfolio.balance ?? 0)
+        let positionsValue = Double(portfolio.totalValue ?? 0)
+        let currentTotalValue = balance + positionsValue
+        
+        if currentTotalValue > 0 {
+            let costBasis = currentTotalValue - totalPnLValue
+            if costBasis > 0 {
+                totalPnLPercent = (totalPnLValue / costBasis) * 100.0
+            } else {
+                totalPnLPercent = 0
+            }
         } else {
             totalPnLPercent = 0
         }
@@ -467,9 +512,11 @@ struct PortfolioView: View {
         totalBalance = portfolio.balance ?? 0
     }
 
-    private struct MarketMeta {
+    fileprivate struct MarketMeta {
         let displayName: String
         let eventUUID: UUID?
+        let outcome: OutcomeMarket?
+        let side: MarketSideType?
     }
 
     private func buildMarketMetaLookup(
@@ -487,25 +534,73 @@ struct PortfolioView: View {
             for outcome in outcomes {
                 let outcomeName = outcome.name.isEmpty ? eventTitle : outcome.name
                 let base = "\(eventTitle) – \(outcomeName)"
+                
+                let yesMarket = outcome.markets?.first(where: { $0.side?.lowercased() == "yes" })
+                let noMarket = outcome.markets?.first(where: { $0.side?.lowercased() == "no" })
+                
+                let yesPrice = yesMarket != nil ? Double(yesMarket!.lastPrice ?? 50) / 100.0 : 0.5
+                let noPrice = noMarket != nil ? Double(noMarket!.lastPrice ?? 50) / 100.0 : 0.5
+                
+                let yesSide = OutcomeMarketSide(
+                    side: .yes,
+                    price: yesPrice,
+                    volume: 0,
+                    bestBid: max(0.01, yesPrice - 0.02),
+                    bestAsk: min(0.99, yesPrice + 0.02),
+                    marketId: outcome.yesMarketId
+                )
+                
+                let noSide = OutcomeMarketSide(
+                    side: .no,
+                    price: noPrice,
+                    volume: 0,
+                    bestBid: max(0.01, noPrice - 0.02),
+                    bestAsk: min(0.99, noPrice + 0.02),
+                    marketId: outcome.noMarketId
+                )
+                
+                let outcomeMarket = OutcomeMarket(
+                    name: outcomeName,
+                    yes: yesSide,
+                    no: noSide,
+                    imgUrl: outcome.imgUrl
+                )
 
                 if let yesId = outcome.yesMarketId {
-                    lookup[Int64(yesId)] = MarketMeta(displayName: "\(base) (Yes)", eventUUID: eventUUID)
+                    lookup[Int64(yesId)] = MarketMeta(
+                        displayName: "\(base) (Yes)",
+                        eventUUID: eventUUID,
+                        outcome: outcomeMarket,
+                        side: .yes
+                    )
                 }
                 if let noId = outcome.noMarketId {
-                    lookup[Int64(noId)] = MarketMeta(displayName: "\(base) (No)", eventUUID: eventUUID)
+                    lookup[Int64(noId)] = MarketMeta(
+                        displayName: "\(base) (No)",
+                        eventUUID: eventUUID,
+                        outcome: outcomeMarket,
+                        side: .no
+                    )
                 }
 
                 if let markets = outcome.markets {
                     for market in markets {
                         let sideLabel: String
+                        let sideType: MarketSideType
                         switch market.side?.lowercased() {
-                        case "yes": sideLabel = "Yes"
-                        case "no": sideLabel = "No"
+                        case "yes":
+                            sideLabel = "Yes"
+                            sideType = .yes
+                        case "no":
+                            sideLabel = "No"
+                            sideType = .no
                         default: continue
                         }
                         lookup[Int64(market.identifier)] = MarketMeta(
                             displayName: "\(base) (\(sideLabel))",
-                            eventUUID: eventUUID
+                            eventUUID: eventUUID,
+                            outcome: outcomeMarket,
+                            side: sideType
                         )
                     }
                 }
@@ -521,6 +616,7 @@ private struct PortfolioPositionRow: View {
     let marketName: String
     let marketPrice: Int64?
     let marketValue: Int64?
+    let onClose: () -> Void
 
     private var formattedValue: String {
         guard let value = marketValue else { return "--" }
@@ -546,6 +642,7 @@ private struct PortfolioPositionRow: View {
                 Text(marketName)
                     .font(.dmMonoMedium(size: 17))
                     .foregroundColor(AppColors.primaryText)
+                    .lineLimit(1)
                 Spacer()
                 Text("Qty: \(position.quantity)")
                     .font(.dmMonoMedium(size: 17))
@@ -555,6 +652,24 @@ private struct PortfolioPositionRow: View {
                 statChip(title: "Price", value: formattedPrice)
                 statChip(title: "Value", value: formattedValue)
                 Spacer()
+                Button {
+                    onClose()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                        Text("Close")
+                            .font(.dmMonoMedium(size: 13))
+                    }
+                    .foregroundColor(.red)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.red.opacity(0.15))
+                    )
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(14)
@@ -588,6 +703,11 @@ private struct PortfolioPositionRow: View {
 
 private struct OrderRow: View {
     let order: Order
+    let marketMeta: [Int64: PortfolioView.MarketMeta]
+    
+    private var marketName: String {
+        marketMeta[Int64(order.marketId)]?.displayName ?? "Market \(order.marketId)"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -598,13 +718,13 @@ private struct OrderRow: View {
                 Spacer()
                 statusBadge
             }
-            Text("Market \(order.marketId)")
+            Text(marketName)
                 .font(.dmMonoRegular(size: 15))
                 .foregroundColor(AppColors.secondaryText(opacity: 0.65))
+                .lineLimit(2)
             HStack(spacing: 10) {
                 statChip(title: "Qty", value: "\(order.originalQuantity)")
                 statChip(title: "Price", value: "\(order.price)")
-                statChip(title: "Status", value: order.status ?? "--")
                 Spacer()
             }
         }
